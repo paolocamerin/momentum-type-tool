@@ -10,13 +10,18 @@ let phaseSpeed = parseFloat(document.getElementById('phaseSpeedSlider').value);
 let phase = parseFloat(document.getElementById('phaseSlider').value);
 let waveFrequency = parseFloat(document.getElementById('waveFrequencySlider').value);
 let waveAmplitude = parseFloat(document.getElementById('waveAmplitudeSlider').value);
-let scaleFactor = parseFloat(document.getElementById('scaleSlider').value);
+let progressionFactor = parseFloat(document.getElementById('progressionFactorSlider').value);
+let spacing = parseInt(document.getElementById('spacingSlider').value);
+let easeIn = parseFloat(document.getElementById('easeInSlider').value);
+let easeOut = parseFloat(document.getElementById('easeOutSlider').value);
 let useWaveScale = document.getElementById('waveScale').checked;
+let lastLetterStatic = false;
 //let showControlPoints = document.getElementById('togglePoints').checked;
 
 let isPaused = false;
 let animationPhase = 0;
-let baseX = 50;
+let margin = parseInt(document.getElementById('marginSlider').value);
+// let baseX = 50; // replaced by margin
 let baseY = 0;
 
 let bgColor = '#ffffff';
@@ -274,88 +279,173 @@ function draw() {
     ctx.fillStyle = currentBg;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-
-    baseY = fontSize;
+    baseY = margin;
 
     resetGlyphProperties();
 
-    let x = baseX;
-    const characterPositions = [];
-    for (let ch of displayText) {
-        const glyph = font.charToGlyph(ch);
-        characterPositions.push(x);
-        x += glyph.advanceWidth * (fontSize / font.unitsPerEm);
-    }
+    // --- Multiline support ---
+    const lines = displayText.split('\n');
+    const lineHeight = fontSize * 1.2; // 1.2x font size for spacing
+    let startY = margin + fontSize;
 
-    let currentX = baseX;
-    characterPositions.forEach((pos, i) => {
-        const ch = displayText[i];
-        const glyph = font.charToGlyph(ch);
-
-        const normalized = (pos - baseX) / fontSize;
-        // Separate wave effect from kerning - wave amplitude is independent
-        const waveEffect = Math.sin(normalized * waveFrequency + animationPhase + phase) * waveAmplitude;
-        // Kerning affects letter spacing directly
-        const kerningAdjustment = kerningFactor * fontSize;
-
-        const path = font.getPath(ch, currentX, baseY, fontSize);
-        const bounds = path.getBoundingBox();
-        const cx = currentX + (bounds.x2 - bounds.x1) / 2;
-        const cy = baseY - (bounds.y2 - bounds.y1) / 2;
-
-        let finalScale = scaleFactor;
-        if (useWaveScale) {
-            finalScale *= Math.sin(normalized * waveFrequency + animationPhase + phase) * 0.5 + 1;
+    for (let lineIdx = 0; lineIdx < lines.length; lineIdx++) {
+        let line = lines[lineIdx];
+        let x = margin;
+        const characterPositions = [];
+        for (let ch of line) {
+            const glyph = font.charToGlyph(ch);
+            characterPositions.push(x);
+            x += glyph.advanceWidth * (fontSize / font.unitsPerEm);
         }
 
-        ctx.save();
-        ctx.translate(cx, cy);
-        ctx.scale(finalScale, finalScale);
-        ctx.translate(-cx, -cy);
-        const currentFill = isSwapped ? fillColor : bgColor;
-        ctx.fillStyle = currentFill;
-        ctx.beginPath();
-        path.commands.forEach(cmd => {
-            switch (cmd.type) {
-                case 'M': ctx.moveTo(cmd.x, cmd.y); break;
-                case 'L': ctx.lineTo(cmd.x, cmd.y); break;
-                case 'C': ctx.bezierCurveTo(cmd.x1, cmd.y1, cmd.x2, cmd.y2, cmd.x, cmd.y); break;
-                case 'Q': ctx.quadraticCurveTo(cmd.x1, cmd.y1, cmd.x, cmd.y); break;
-                case 'Z': ctx.closePath(); break;
+        let currentX = margin;
+        const lineLen = line.length;
+        if (lastLetterStatic && lineLen > 0) {
+            // Animate all but last letter
+            for (let i = 0; i < lineLen - 1; i++) {
+                const ch = line[i];
+                const glyph = font.charToGlyph(ch);
+                const pos = characterPositions[i];
+                const normalized = (pos - margin) / fontSize;
+                const kerningAdjustment = kerningFactor * fontSize;
+                const glyphWidth = glyph.advanceWidth * (fontSize / font.unitsPerEm);
+                let leftEdge;
+                if (i === 0) {
+                    // First letter: static (no wave effect)
+                    leftEdge = currentX;
+                } else {
+                    // All other letters: apply wave effect + progression
+                    const waveEffect = Math.sin(normalized * waveFrequency + animationPhase + phase) * waveAmplitude;
+                    // Apply smooth ease in/out to reduce bouncy feeling
+                    const position = i / (lineLen - 1);
+                    const easeInCurve = easeIn * (1 - Math.pow(position, 2)); // Smooth quadratic curve
+                    const easeOutCurve = easeOut * Math.pow(position, 2); // Smooth quadratic curve
+                    const easeMultiplier = 1 + easeInCurve + easeOutCurve;
+                    // Add progression effect that works even when amplitude is 0
+                    const progressionEffect = progressionFactor * fontSize * (i / (lineLen - 1)) * Math.abs(Math.sin(animationPhase * 0.1));
+                    leftEdge = currentX + (waveEffect + progressionEffect) * easeMultiplier;
+                }
+                // Draw at leftEdge
+                const path = font.getPath(ch, leftEdge, startY, fontSize);
+                const bounds = path.getBoundingBox();
+                const cx = leftEdge + (bounds.x2 - bounds.x1) / 2;
+                const cy = startY - (bounds.y2 - bounds.y1) / 2;
+                let finalScale = 1; // Default scale
+                if (useWaveScale) {
+                    finalScale *= Math.sin(normalized * waveFrequency + animationPhase + phase) * 0.5 + 1;
+                }
+                ctx.save();
+                ctx.translate(cx, cy);
+                ctx.scale(finalScale, finalScale);
+                ctx.translate(-cx, -cy);
+                const currentFill = isSwapped ? fillColor : bgColor;
+                ctx.fillStyle = currentFill;
+                ctx.beginPath();
+                path.commands.forEach(cmd => {
+                    switch (cmd.type) {
+                        case 'M': ctx.moveTo(cmd.x, cmd.y); break;
+                        case 'L': ctx.lineTo(cmd.x, cmd.y); break;
+                        case 'C': ctx.bezierCurveTo(cmd.x1, cmd.y1, cmd.x2, cmd.y2, cmd.x, cmd.y); break;
+                        case 'Q': ctx.quadraticCurveTo(cmd.x1, cmd.y1, cmd.x, cmd.y); break;
+                        case 'Z': ctx.closePath(); break;
+                    }
+                });
+                ctx.fill();
+                ctx.restore();
+                currentX = leftEdge + glyphWidth + kerningAdjustment + spacing;
             }
-        });
-        ctx.fill();
-
-        // Draw control points if enabled
-        // if (showControlPoints) {
-        //     ctx.strokeStyle = 'rgba(255,0,0,0.5)';
-        //     ctx.fillStyle = 'red';
-        //     path.commands.forEach(cmd => {
-        //         if (cmd.type === 'C') {
-        //             ctx.beginPath();
-        //             ctx.arc(cmd.x1, cmd.y1, 3, 0, Math.PI * 2);
-        //             ctx.arc(cmd.x2, cmd.y2, 3, 0, Math.PI * 2);
-        //             ctx.fill();
-        //             ctx.beginPath();
-        //             ctx.moveTo(cmd.x1, cmd.y1);
-        //             ctx.lineTo(cmd.x2, cmd.y2);
-        //             ctx.stroke();
-        //         }
-        //         if (cmd.type === 'C' || cmd.type === 'L' || cmd.type === 'M') {
-        //             ctx.fillStyle = 'green';
-        //             ctx.beginPath();
-        //             ctx.arc(cmd.x, cmd.y, 2, 0, Math.PI * 2);
-        //             ctx.fill();
-        //             ctx.fillStyle = 'red';
-        //         }
-        //     });
-        // }
-
-        ctx.restore();
-
-        // Apply both wave effect and kerning to character positioning
-        currentX += glyph.advanceWidth * (fontSize / font.unitsPerEm) + waveEffect + kerningAdjustment;
-    });
+            // Draw last letter static at the end of the line
+            const lastCh = line[lineLen - 1];
+            const lastGlyph = font.charToGlyph(lastCh);
+            // Calculate the static position for the last letter
+            // Compute total width of the line (excluding last letter)
+            let totalWidth = 0;
+            for (let i = 0; i < lineLen; i++) {
+                const glyph = font.charToGlyph(line[i]);
+                totalWidth += glyph.advanceWidth * (fontSize / font.unitsPerEm);
+            }
+            // Get the last glyph's width
+            const lastGlyphWidth = lastGlyph.advanceWidth * (fontSize / font.unitsPerEm);
+            // Position so that the right edge of the last letter is at (canvas.width - margin)
+            let staticX = canvas.width - margin - lastGlyphWidth;
+            const path = font.getPath(lastCh, staticX, startY, fontSize);
+            const bounds = path.getBoundingBox();
+            const cx = staticX + (bounds.x2 - bounds.x1) / 2;
+            const cy = startY - (bounds.y2 - bounds.y1) / 2;
+            ctx.save();
+            ctx.translate(cx, cy);
+            ctx.scale(1, 1); // Default scale for last letter
+            ctx.translate(-cx, -cy);
+            const currentFill = isSwapped ? fillColor : bgColor;
+            ctx.fillStyle = currentFill;
+            ctx.beginPath();
+            path.commands.forEach(cmd => {
+                switch (cmd.type) {
+                    case 'M': ctx.moveTo(cmd.x, cmd.y); break;
+                    case 'L': ctx.lineTo(cmd.x, cmd.y); break;
+                    case 'C': ctx.bezierCurveTo(cmd.x1, cmd.y1, cmd.x2, cmd.y2, cmd.x, cmd.y); break;
+                    case 'Q': ctx.quadraticCurveTo(cmd.x1, cmd.y1, cmd.x, cmd.y); break;
+                    case 'Z': ctx.closePath(); break;
+                }
+            });
+            ctx.fill();
+            ctx.restore();
+            startY += lineHeight;
+        } else {
+            // Animate all letters as usual
+            characterPositions.forEach((pos, i) => {
+                const ch = line[i];
+                const glyph = font.charToGlyph(ch);
+                const normalized = (pos - margin) / fontSize;
+                const kerningAdjustment = kerningFactor * fontSize;
+                const glyphWidth = glyph.advanceWidth * (fontSize / font.unitsPerEm);
+                let leftEdge;
+                if (i === 0) {
+                    // First letter: static (no wave effect)
+                    leftEdge = currentX;
+                } else {
+                    // All other letters: apply wave effect + progression
+                    const waveEffect = Math.sin(normalized * waveFrequency + animationPhase + phase) * waveAmplitude;
+                    // Apply smooth ease in/out to reduce bouncy feeling
+                    const position = i / lineLen;
+                    const easeInCurve = easeIn * (1 - Math.pow(position, 2)); // Smooth quadratic curve
+                    const easeOutCurve = easeOut * Math.pow(position, 2); // Smooth quadratic curve
+                    const easeMultiplier = 1 + easeInCurve + easeOutCurve;
+                    // Add progression effect that works even when amplitude is 0
+                    const progressionEffect = progressionFactor * fontSize * (i / lineLen) * Math.abs(Math.sin(animationPhase * 0.1));
+                    leftEdge = currentX + (waveEffect + progressionEffect) * easeMultiplier;
+                }
+                const path = font.getPath(ch, leftEdge, startY, fontSize);
+                const bounds = path.getBoundingBox();
+                const cx = leftEdge + (bounds.x2 - bounds.x1) / 2;
+                const cy = startY - (bounds.y2 - bounds.y1) / 2;
+                let finalScale = 1; // Default scale
+                if (useWaveScale) {
+                    finalScale *= Math.sin(normalized * waveFrequency + animationPhase + phase) * 0.5 + 1;
+                }
+                ctx.save();
+                ctx.translate(cx, cy);
+                ctx.scale(finalScale, finalScale);
+                ctx.translate(-cx, -cy);
+                const currentFill = isSwapped ? fillColor : bgColor;
+                ctx.fillStyle = currentFill;
+                ctx.beginPath();
+                path.commands.forEach(cmd => {
+                    switch (cmd.type) {
+                        case 'M': ctx.moveTo(cmd.x, cmd.y); break;
+                        case 'L': ctx.lineTo(cmd.x, cmd.y); break;
+                        case 'C': ctx.bezierCurveTo(cmd.x1, cmd.y1, cmd.x2, cmd.y2, cmd.x, cmd.y); break;
+                        case 'Q': ctx.quadraticCurveTo(cmd.x1, cmd.y1, cmd.x, cmd.y); break;
+                        case 'Z': ctx.closePath(); break;
+                    }
+                });
+                ctx.fill();
+                ctx.restore();
+                currentX = leftEdge + glyphWidth + kerningAdjustment + spacing;
+            });
+            startY += lineHeight;
+        }
+    }
 }
 
 // -------------------- NEW: utility to force a redraw when paused --------------------
@@ -364,6 +454,61 @@ function requestRender() {
         draw();
     }
 }
+
+// Utility to calculate the maximum safe amplitude for the current line/font settings
+function getMaxSafeAmplitude() {
+    if (!font) return 2000; // fallback
+    let maxAmp = Infinity;
+    const lines = displayText.split('\n');
+    for (const line of lines) {
+        let prevWidth = null;
+        for (let i = 1; i < line.length; i++) {
+            const prevGlyph = font.charToGlyph(line[i - 1]);
+            const currGlyph = font.charToGlyph(line[i]);
+            const prevWidthPx = prevGlyph.advanceWidth * (fontSize / font.unitsPerEm);
+            const currWidthPx = currGlyph.advanceWidth * (fontSize / font.unitsPerEm);
+            // The minimum center-to-center distance is half the sum of widths
+            // The max amplitude is half the gap between the glyphs (since wave can bring them together)
+            const minDist = (prevWidthPx + currWidthPx) / 2 + kerningFactor * fontSize;
+            // The normalized distance between letters in the wave
+            const normDist = 1 / waveFrequency; // rough estimate
+            // The max amplitude is limited by half the minDist
+            maxAmp = Math.min(maxAmp, minDist / 2);
+        }
+    }
+    // Clamp to a reasonable minimum
+    return Math.max(0, Math.floor(maxAmp) || 0);
+}
+
+function updateAmplitudeSliderMax() {
+    const ampSlider = document.getElementById('waveAmplitudeSlider');
+    const ampValue = document.getElementById('waveAmplitudeValue');
+    const maxAmp = getMaxSafeAmplitude();
+    ampSlider.max = maxAmp;
+    if (waveAmplitude > maxAmp) {
+        waveAmplitude = maxAmp;
+        ampSlider.value = maxAmp;
+        ampValue.textContent = maxAmp;
+    }
+}
+
+// Call updateAmplitudeSliderMax when relevant settings change
+['textInput','fontSizeSlider','kerningSlider','marginSlider'].forEach(id => {
+    document.getElementById(id).addEventListener('input', updateAmplitudeSliderMax);
+});
+
+// Also call after font loads
+window.addEventListener('DOMContentLoaded', updateAmplitudeSliderMax);
+
+// Update amplitude on slider change, clamped
+const waveAmplitudeSlider = document.getElementById('waveAmplitudeSlider');
+waveAmplitudeSlider.addEventListener('input', e => {
+    const maxAmp = getMaxSafeAmplitude();
+    waveAmplitude = Math.min(parseFloat(e.target.value), maxAmp);
+    document.getElementById('waveAmplitudeValue').textContent = waveAmplitude;
+    updateAmplitudeSliderMax();
+    requestRender();
+});
 
 // ---------------- UI bindings ------------------------------------------
 document.getElementById('kerningSlider').addEventListener('input', e => {
@@ -403,9 +548,15 @@ document.getElementById('togglePause').addEventListener('click', () => {
     isPaused = !isPaused;
 });
 
-document.getElementById('scaleSlider').addEventListener('input', e => {
-    scaleFactor = parseFloat(e.target.value);
-    document.getElementById('scaleValue').textContent = scaleFactor.toFixed(2);
+document.getElementById('easeInSlider').addEventListener('input', e => {
+    easeIn = parseFloat(e.target.value);
+    document.getElementById('easeInValue').textContent = easeIn.toFixed(2);
+    requestRender();
+});
+
+document.getElementById('easeOutSlider').addEventListener('input', e => {
+    easeOut = parseFloat(e.target.value);
+    document.getElementById('easeOutValue').textContent = easeOut.toFixed(2);
     requestRender();
 });
 
@@ -421,14 +572,39 @@ document.getElementById('waveFrequencySlider').addEventListener('input', e => {
 });
 
 document.getElementById('waveAmplitudeSlider').addEventListener('input', e => {
-    waveAmplitude = parseFloat(e.target.value);
+    const maxAmp = getMaxSafeAmplitude();
+    waveAmplitude = Math.min(parseFloat(e.target.value), maxAmp);
     document.getElementById('waveAmplitudeValue').textContent = waveAmplitude;
+    updateAmplitudeSliderMax();
+    requestRender();
+});
+
+document.getElementById('progressionFactorSlider').addEventListener('input', e => {
+    progressionFactor = parseFloat(e.target.value);
+    document.getElementById('progressionFactorValue').textContent = progressionFactor.toFixed(2);
+    requestRender();
+});
+
+document.getElementById('spacingSlider').addEventListener('input', e => {
+    spacing = parseInt(e.target.value);
+    document.getElementById('spacingValue').textContent = spacing;
     requestRender();
 });
 
 document.getElementById('swapColors').addEventListener('change', e => {
     isSwapped = !isSwapped;
     syncPickers();
+    requestRender();
+});
+
+document.getElementById('lastLetterStaticToggle').addEventListener('change', e => {
+    lastLetterStatic = e.target.checked;
+    requestRender();
+});
+
+document.getElementById('marginSlider').addEventListener('input', e => {
+    margin = parseInt(e.target.value);
+    document.getElementById('marginValue').textContent = margin;
     requestRender();
 });
 
@@ -443,7 +619,7 @@ function exportToSVG() {
     svg.setAttribute('height', canvas.height);
     svg.setAttribute('viewBox', `0 0 ${canvas.width} ${canvas.height}`);
 
-    let x = baseX;
+    let x = margin;
     const charPositions = [];
     for (let ch of displayText) {
         const glyph = font.charToGlyph(ch);
@@ -454,11 +630,11 @@ function exportToSVG() {
     const group = document.createElementNS(svgNS, 'g');
     svg.appendChild(group);
 
-    let currentX = baseX;
+    let currentX = margin;
     charPositions.forEach((pos, i) => {
         const ch = displayText[i];
         const glyph = font.charToGlyph(ch);
-        const normalized = (pos - baseX) / fontSize;
+        const normalized = (pos - margin) / fontSize;
         const waveEffect = Math.sin(normalized * waveFrequency + animationPhase + phase) * waveAmplitude;
 
         const path = font.getPath(ch, currentX, baseY, fontSize);
@@ -466,7 +642,7 @@ function exportToSVG() {
         const cx = currentX + (bounds.x2 - bounds.x1) / 2;
         const cy = baseY - (bounds.y2 - bounds.y1) / 2;
 
-        let finalScale = scaleFactor;
+        let finalScale = easeIn; // Use easeIn for the first letter
         if (useWaveScale) finalScale *= Math.sin(normalized * waveFrequency + animationPhase + phase) * 0.5 + 1;
 
         const svgPath = document.createElementNS(svgNS, 'path');

@@ -12,30 +12,142 @@ canvas {
 /* Control panel styling */
 .controls {
     position: fixed;
-    bottom: 20px;
-    left: 20px;
-    /* Fallback for browsers that don't support backdrop-filter */
-    background-color: #525252b6;
-    /* Safari */
-    -webkit-backdrop-filter: blur(10px);
-    /* Other browsers */
-    backdrop-filter: blur(10px);
-    padding: 10px;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    width: calc(100vw - 80px);
+    max-width: calc(100vw - 80px);
+    margin: 0 auto 40px auto;
     border-radius: 24px;
-    /* Safari */
     -webkit-border-radius: 24px;
+    background-color: #525252b6;
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+    padding: 40px;
     border: 1px solid rgba(255, 255, 255, 0.537);
-    /* Multiple box-shadows for better effect */
     -webkit-box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1), 0 1px 3px rgba(0, 0, 0, 0.08);
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1), 0 1px 3px rgba(0, 0, 0, 0.08);
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     color: #fff;
-    /* Smooth transitions */
     -webkit-transition: all 0.3s ease;
     transition: all 0.3s ease;
-    /* Better text rendering */
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    display: flex;
+    flex-direction: row;
+    align-items: flex-start;
+    max-height: 60vh;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    scrollbar-width: thin;
+    scrollbar-color: #888 #333;
+    gap: 0;
+    box-sizing: border-box;
+}
+
+/* For Webkit browsers */
+.controls::-webkit-scrollbar {
+    width: 10px;
+}
+.controls::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 8px;
+}
+.controls::-webkit-scrollbar-track {
+    background: #333;
+    border-radius: 8px;
+}
+
+.controls-main-cols {
+    width: 100%;
+    max-width: 100vw;
+    display: flex;
+    flex-direction: row;
+    height: 100%;
+    gap: 40px;
+    justify-content: stretch;
+    align-items: stretch;
+}
+
+.controls-col {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    height: 100%;
+    justify-content: flex-start;
+    flex: 1 1 0;
+    min-width: 0;
+}
+
+.controls-col-left {
+    min-width: 220px;
+    flex: 1 1 0;
+    gap: 12px;
+}
+
+.controls-col-sliders {
+    flex: 1 1 0;
+    display: flex;
+    align-items: flex-start;
+    justify-content: flex-start;
+    width: 100%;
+}
+
+.slider-columns {
+    display: flex;
+    flex-direction: row;
+    gap: 40px;
+    width: 100%;
+    height: 100%;
+}
+
+.slider-col {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    flex: 1 1 0;
+    width: 100%;
+    min-width: 0;
+}
+
+.controls-col-actions {
+    min-width: 180px;
+    max-width: 255px;
+    flex: 0 0 255px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    justify-content: flex-start;
+}
+
+#exportButtons {
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 12px;
+    padding: 0;
+    margin-top: 0;
+    width: 100%;
+}
+
+.color-controls, #textInputContainer, .slider-container, #kerningContainer, .stored-fonts {
+    margin-top: 0 !important;
+    margin-bottom: 0 !important;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+#textInput, .slider-container input[type="range"], .color-controls, .stored-fonts select, .upload-btn, button, select {
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.slider-container, #kerningContainer, #textInputContainer {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+    justify-content: flex-start;
+    width: 100%;
 }
 
 .controls-header {
@@ -146,17 +258,6 @@ canvas {
     margin-left: 10px;
 }
 
-.color-controls {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin-top: 10px;
-    color: #fff;
-    background-color: #333333b5;
-    padding: 10px;
-    border-radius: 5px;
-}
-
 canvas {
     margin: 0;
 }
@@ -183,16 +284,6 @@ button {
 
 #togglePause {
     background-color: #202020;
-}
-
-#exportButtons {
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    gap: 8px;
-    justify-content: left;
-    padding: 8px;
-    margin-top: 10px;
 }
 
 #textInputContainer {
@@ -328,4 +419,30 @@ button {
 .stored-fonts select option {
     background-color: #525252;
     color: white;
+}
+
+.color-controls {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 12px;
+    background-color: #333333b5;
+    padding: 10px;
+    border-radius: 5px;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.row-flex {
+    display: flex;
+    flex-direction: row;
+    gap: 12px;
+    align-items: flex-end;
+    width: 100%;
+}
+
+.choose-font-btn {
+    width: 100px !important;
+    min-width: 100px;
+    max-width: 100px;
 }
