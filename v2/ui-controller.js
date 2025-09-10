@@ -2,7 +2,7 @@
 
 // UI elements
 let phaseSlider, ampSlider, verticalOffsetSlider, marginSlider;
-let playPauseBtn, alignmentCheckbox, textInput, fontUploadBtn, fontFile, fontSelect, exportSVGBtn;
+let playPauseBtn, alignmentCheckbox, shaderModeCheckbox, textInput, fontUploadBtn, fontFile, fontSelect, exportSVGBtn;
 let phaseValue, ampValue, verticalOffsetValue, marginValue;
 let typingInfo;
 
@@ -23,6 +23,7 @@ function initUI(initialWords, initialUserHasTyped, initialWdt) {
     marginSlider = document.getElementById('marginSlider');
     playPauseBtn = document.getElementById('playPauseBtn');
     alignmentCheckbox = document.getElementById('alignmentCheckbox');
+    shaderModeCheckbox = document.getElementById('shaderModeCheckbox');
     textInput = document.getElementById('textInput');
     fontUploadBtn = document.getElementById('fontUploadBtn');
     fontFile = document.getElementById('fontFile');
@@ -42,7 +43,7 @@ function initUI(initialWords, initialUserHasTyped, initialWdt) {
     textInput.value = words;
 
     // Initialize alignment state from checkbox
-    AnimationEngine.setAlignment(alignmentCheckbox.checked);
+    window.RenderPipeline.setTextAlignment(alignmentCheckbox.checked);
 }
 
 // Setup all event listeners
@@ -50,41 +51,31 @@ function setupEventListeners() {
     // Slider events
     phaseSlider.addEventListener('input', () => {
         updateSliderValues();
-        // Always update the display when sliders change
-        AnimationEngine.draw(words, userHasTyped);
     });
 
     ampSlider.addEventListener('input', () => {
         updateSliderValues();
-        // Always update the display when sliders change
-        AnimationEngine.draw(words, userHasTyped);
     });
 
     verticalOffsetSlider.addEventListener('input', () => {
         updateSliderValues();
-        // Always update the display when sliders change
-        AnimationEngine.draw(words, userHasTyped);
     });
 
     marginSlider.addEventListener('input', () => {
         updateSliderValues();
-        // Canvas width update is handled by main.js
-        // Always update the display when sliders change
-        AnimationEngine.draw(words, userHasTyped);
     });
 
     // Button events
     playPauseBtn.addEventListener('click', () => {
-        AnimationEngine.togglePlayback();
-        if (AnimationEngine.isPlaying()) {
-            AnimationEngine.animate();
-        }
+        window.AnimationEngine.togglePlayback();
     });
 
     alignmentCheckbox.addEventListener('change', () => {
-        AnimationEngine.setAlignment(alignmentCheckbox.checked);
-        // Always update the display when alignment changes
-        AnimationEngine.draw(words, userHasTyped);
+        window.RenderPipeline.setTextAlignment(alignmentCheckbox.checked);
+    });
+
+    shaderModeCheckbox.addEventListener('change', () => {
+        window.RenderPipeline.setShaderMode(shaderModeCheckbox.checked);
     });
 
     fontUploadBtn.addEventListener('click', () => fontFile.click());
@@ -129,8 +120,7 @@ function handleTextInput() {
         }
     }
 
-    // Always update the display when text changes
-    AnimationEngine.draw(words, userHasTyped);
+    // Text changes are handled by the animation loop
 }
 
 // Canvas width management (handled by main.js)
@@ -158,13 +148,33 @@ function getCurrentState() {
         words,
         userHasTyped,
         wdt,
-        phase: AnimationEngine.getFrameCount() * 0.05,
+        phase: window.AnimationEngine.getFrameCount() * 0.05,
         additionalPhase: getPhaseValue(),
         amplitude: getAmplitudeValue(),
         rowOffset: getVerticalOffsetValue(),
         margin: getMarginValue(),
-        isLeftAligned: AnimationEngine.getAlignment()
+        isLeftAligned: window.RenderPipeline.getTextAlignment()
     };
+}
+
+// Get background color
+function getBackgroundColor() {
+    return '#ffffff';
+}
+
+// Get fill color
+function getFillColor() {
+    return '#000000';
+}
+
+// Get speed value
+function getSpeedValue() {
+    return 1.0;
+}
+
+// Get factor value
+function getFactorValue() {
+    return 1.4;
 }
 
 // Export UI controller functions
@@ -177,6 +187,10 @@ window.UIController = {
     getAmplitudeValue,
     getVerticalOffsetValue,
     getMarginValue,
+    getBackgroundColor,
+    getFillColor,
+    getSpeedValue,
+    getFactorValue,
     getWords: () => words,
     getUserHasTyped: () => userHasTyped,
     getWdt: () => wdt,

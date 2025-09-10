@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Debug Module Loading</title>
+</head>
+
+<body>
+    <h1>Debug Module Loading</h1>
+    <div id="results"></div>
+
+    <script>
+        console.log('Before loading any modules...');
+        console.log('CanvasManager before:', typeof window.CanvasManager);
+    </script>
+
+    <script src="canvas/canvas-manager.js"></script>
+
+    <script>
+        console.log('After loading canvas-manager.js...');
+        console.log('CanvasManager after:', typeof window.CanvasManager);
+        console.log('CanvasManager object:', window.CanvasManager);
+
+        if (window.CanvasManager && typeof window.CanvasManager.init === 'function') {
+            document.getElementById('results').innerHTML = '<p style="color: green;">✅ CanvasManager loaded successfully</p>';
+        } else {
+            document.getElementById('results').innerHTML = '<p style="color: red;">❌ CanvasManager failed to load</p>';
+        }
+    </script>
+</body>
+
+</html>

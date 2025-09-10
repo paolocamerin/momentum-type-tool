@@ -11,35 +11,41 @@ function setupCanvas() {
 }
 
 function resizeCanvas() {
-    const canvas = AnimationEngine.getCanvas();
-    canvas.width = window.innerWidth;
-    canvas.height = (window.innerWidth / 16) * 9;
+    window.CanvasManager.resize();
     updateCanvasWidth();
-
-    // Set canvas style
-    canvas.style.width = window.innerWidth + 'px';
-    canvas.style.height = canvas.height + 'px';
-
-    if (!AnimationEngine.isPlaying()) {
-        AnimationEngine.draw(words, userHasTyped);
-    }
 }
 
 function updateCanvasWidth() {
     const margin = UIController.getMarginValue();
-    const canvas = AnimationEngine.getCanvas();
-    wdt = canvas.width - margin * 2;
+    const dimensions = window.CanvasManager.getDimensions();
+    wdt = dimensions.width - margin * 2;
 }
 
 // Initialize the application
 async function init() {
     try {
-        // Initialize canvas
-        const canvas = document.getElementById('canvas');
-        const ctx = canvas.getContext('2d');
+        // Initialize canvas system
+        console.log('[Main] CanvasManager type:', typeof window.CanvasManager);
+        console.log('[Main] CanvasManager.init type:', typeof window.CanvasManager.init);
+        console.log('[Main] CanvasManager object:', window.CanvasManager);
+        console.log('[Main] About to call CanvasManager.init...');
+        try {
+            window.CanvasManager.init('canvas', 'shader-canvas');
+            console.log('[Main] CanvasManager.init called successfully');
+        } catch (error) {
+            console.error('[Main] Error calling CanvasManager.init:', error);
+            throw error;
+        }
+
+        // Initialize shader system
+        const shaderCanvas = window.CanvasManager.getShaderCanvas();
+        const shaderInitialized = await window.ShaderManager.init(shaderCanvas);
+
+        // Initialize render pipeline
+        window.RenderPipeline.init();
 
         // Initialize animation engine
-        AnimationEngine.init(canvas, ctx);
+        window.AnimationEngine.init();
 
         // Initialize UI controller
         UIController.init(words, userHasTyped, wdt);
@@ -55,17 +61,19 @@ async function init() {
         await FontManager.loadDefaultFont();
 
         // Start animation
-        AnimationEngine.animate();
+        window.AnimationEngine.animate();
 
     } catch (err) {
         console.error('Error initializing app:', err);
         // Fallback: initialize without font system
-        AnimationEngine.init(canvas, ctx);
+        window.CanvasManager.init('canvas', 'shader-canvas');
+        window.RenderPipeline.init();
+        window.AnimationEngine.init();
         UIController.init(words, userHasTyped, wdt);
         UIController.setupEventListeners();
         UIController.updateSliderValues();
         setupCanvas();
-        AnimationEngine.animate();
+        window.AnimationEngine.animate();
     }
 }
 

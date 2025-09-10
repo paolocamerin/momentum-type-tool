@@ -11,6 +11,7 @@ canvas {
 
 /* Control panel styling */
 .controls {
+    width: 100%;
     position: fixed;
     bottom: 20px;
     left: 20px;

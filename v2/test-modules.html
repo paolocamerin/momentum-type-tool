@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Module Test</title>
+</head>
+
+<body>
+    <h1>Testing Module Loading</h1>
+    <div id="results"></div>
+
+    <script src="font-manager.js"></script>
+    <script src="canvas/canvas-manager.js"></script>
+    <script src="shaders/shader-manager.js"></script>
+    <script src="rendering/text-renderer.js"></script>
+    <script src="rendering/background-renderer.js"></script>
+    <script src="rendering/render-pipeline.js"></script>
+    <script src="core/animation-engine.js"></script>
+
+    <script>
+        const results = document.getElementById('results');
+
+        function testModule(name, module) {
+            if (typeof module === 'object' && module !== null) {
+                results.innerHTML += `<p>✅ ${name}: Loaded successfully</p>`;
+                console.log(`${name}:`, module);
+            } else {
+                results.innerHTML += `<p>❌ ${name}: Failed to load</p>`;
+                console.error(`${name}:`, module);
+            }
+        }
+
+        testModule('CanvasManager', window.CanvasManager);
+        testModule('ShaderManager', window.ShaderManager);
+        testModule('TextRenderer', window.TextRenderer);
+        testModule('BackgroundRenderer', window.BackgroundRenderer);
+        testModule('RenderPipeline', window.RenderPipeline);
+        testModule('AnimationEngine', window.AnimationEngine);
+    </script>
+</body>
+
+</html>
