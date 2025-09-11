@@ -47,7 +47,13 @@ void main() {
     
     finalColor /= totalWeight;
     
-  
+    // Add thin grain effect
+    float grain = fract(sin(dot(uv + u_time * 0.0001, vec2(12.9898, 78.233))) * 43758.5453);
+    grain = (grain - 0.5) * 0.05; // Thin grain intensity (12% of full range)
+    finalColor += grain;
+    
+    // Clamp to prevent oversaturation
+    finalColor = clamp(finalColor, 0.0, 1.0);
     
     gl_FragColor = vec4(finalColor, 1.0);
 }
