@@ -105,6 +105,8 @@ function setupEventListeners() {
     // Export functionality
     exportSVGBtn.addEventListener('click', ExportManager.exportToSVG);
     document.getElementById('exportPNGBtn').addEventListener('click', ExportManager.exportToPNG);
+    document.getElementById('exportVideoBtn').addEventListener('click', handleVideoExport);
+    document.getElementById('recordLiveBtn').addEventListener('click', handleLiveRecording);
 
     // Text input events
     textInput.addEventListener('input', handleTextInput);
@@ -250,6 +252,78 @@ function getSpeedValue() {
 // Get factor value
 function getFactorValue() {
     return 1.4;
+}
+
+// Video export handlers
+async function handleVideoExport() {
+    const canvas = document.getElementById('canvas');
+    if (!canvas) {
+        alert('Canvas not found');
+        return;
+    }
+
+    // Wait for VideoExport to be available
+    if (!window.VideoExport || !window.VideoExport.exportCanvasToMP4) {
+        alert('Video export module not loaded yet. Please try again in a moment.');
+        return;
+    }
+
+    try {
+        await window.VideoExport.exportCanvasToMP4({
+            canvas: canvas,
+            durationSec: 5,
+            quality: 'high',
+            onProgress: (progress) => {
+                console.log(`Export progress: ${Math.round(progress * 100)}%`);
+            }
+        });
+    } catch (error) {
+        console.error('Video export failed:', error);
+        alert(`Video export failed: ${error.message}`);
+    }
+}
+
+async function handleLiveRecording() {
+    const canvas = document.getElementById('canvas');
+    if (!canvas) {
+        alert('Canvas not found');
+        return;
+    }
+
+    // Wait for VideoExport to be available
+    if (!window.VideoExport || !window.VideoExport.startLiveRecording) {
+        alert('Video export module not loaded yet. Please try again in a moment.');
+        return;
+    }
+
+    const recordBtn = document.getElementById('recordLiveBtn');
+
+    if (!window.currentRecording) {
+        // Start recording
+        try {
+            window.currentRecording = await window.VideoExport.startLiveRecording({
+                canvas: canvas,
+                fps: 30,
+                quality: 'high'
+            });
+
+            recordBtn.textContent = 'Stop Recording';
+            console.log('Live recording started');
+        } catch (error) {
+            console.error('Start recording failed:', error);
+            alert(`Start recording failed: ${error.message}`);
+        }
+    } else {
+        // Stop recording
+        try {
+            await window.VideoExport.stopLiveRecording();
+            recordBtn.textContent = 'Record Live';
+            window.currentRecording = null;
+        } catch (error) {
+            console.error('Stop recording failed:', error);
+            alert(`Stop recording failed: ${error.message}`);
+        }
+    }
 }
 
 // Export UI controller functions
