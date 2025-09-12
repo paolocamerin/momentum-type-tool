@@ -4,116 +4,81 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Momentum type tool V2 - Vanilla JS</title>
+
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/opentype.js@1.3.4/dist/opentype.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap" rel="stylesheet">
-    <title>MOMENTUM Type Tool</title>
-    <link rel="stylesheet" href="styles.css">
-    <!-- Pickr assets -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@simonwep/pickr/dist/themes/classic.min.css" />
-    <script src="https://cdn.jsdelivr.net/npm/@simonwep/pickr"></script>
-    <!-- Phosphor Icons -->
-    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <script src="https://unpkg.com/simplex-noise@2.4.0/simplex-noise.js"></script>
+    <link rel="stylesheet" href="style.css">
 </head>
 
 <body>
-    <div class="controls">
-        <div class="controls-header">
-            <button class="close-btn" id="closeControls" title="Close panel (press 'C' to show again)">
-                <i class="ph ph-x"></i>
-            </button>
-        </div>
-        <button class="upload-btn" onclick="document.getElementById('fontFile').click()">Choose Font</button>
-        <input type="file" id="fontFile" accept=".ttf,.otf,.woff">
+    <canvas id="canvas"></canvas>
+    <canvas id="shader-canvas"></canvas>
 
-        <div class="stored-fonts">
+    <div class="controls">
+        <div class="slider-container">
+            <label for="phaseSlider">Phase: <span id="phaseValue" class="value-display">0.00</span></label>
+            <input type="range" id="phaseSlider" min="0" max="1" step="0.01" value="0">
+        </div>
+
+        <div class="slider-container">
+            <label for="ampSlider">Amplitude: <span id="ampValue" class="value-display">100</span></label>
+            <input type="range" id="ampSlider" min="0" max="1" step="0.01" value="0.5">
+        </div>
+
+        <div class="slider-container">
+            <label for="verticalOffsetSlider">Vertical Offset: <span id="verticalOffsetValue"
+                    class="value-display">0.00</span></label>
+            <input type="range" id="verticalOffsetSlider" min="0" max="1" step="0.01" value="0">
+        </div>
+
+        <div class="slider-container">
+            <label for="marginSlider">Margin: <span id="marginValue" class="value-display">100</span>px</label>
+            <input type="range" id="marginSlider" min="0" max="1" step="0.01" value="0.5">
+        </div>
+
+        <div class="text-input-container">
+            <label for="textInput">Text:</label>
+            <textarea id="textInput" placeholder="Enter your text here..." rows="3"></textarea>
+        </div>
+
+        <button id="fontUploadBtn">Choose Font</button>
+        <input type="file" id="fontFile" accept=".ttf,.otf,.woff" style="display: none;">
+
+        <div class="font-selector-container">
+            <label for="fontSelect">Font:</label>
             <select id="fontSelect">
-                <option value="">Select a stored font</option>
+                <option value="">Select a font</option>
             </select>
         </div>
-        <div class="color-controls">
 
-            <div id="fillPicker" class="color-swatch"></div>
-            <label style="margin-right:10px;">Color 1</label>
+        <button id="playPauseBtn">Pause/Play</button>
+        <button id="exportSVGBtn">Export SVG</button>
 
-            <div id="bgPicker" class="color-swatch"></div>
-            <label style="margin-right:10px;">Color 2</label>
-            <input type="checkbox" id="swapColors" class="switch-input" style="margin-left:10px;">
-            <label for="swapColors" class="switch-label"></label>
-            <span style="margin-left:4px;">Swap</span>
-        </div>
-        <div id="kerningContainer">
-            <label for="kerningSlider">Kerning :</label>
-            <input type="range" id="kerningSlider" min="0" max="1" step="0.001" value="0.02">
+        <div class="checkbox-container">
+            <input type="checkbox" id="alignmentCheckbox">
+            <label for="alignmentCheckbox">Left Align</label>
         </div>
 
-
-        <div id="textInputContainer" style="margin-top: 10px;">
-            <label for="textInput">Text</label>
-            <input type="text" id="textInput" value="MOMENTUM">
-
+        <div class="checkbox-container">
+            <input type="checkbox" id="shaderModeCheckbox">
+            <label for="shaderModeCheckbox">Shader Mode</label>
         </div>
-        <div class="slider-container" style="margin-top: 10px;">
-            <label for="fontSizeSlider">Font Size: <span id="fontSizeValue">200</span></label>
-            <input type="range" id="fontSizeSlider" min="8" max="1000" step="1" value="200">
-
-        </div>
-
-        <div class="slider-container" style="margin-top: 10px;">
-            <label for="phaseSlider">Phase: <span id="phaseValue">0</span></label>
-            <input type="range" id="phaseSlider" min="-5" max="5" step="0.001" value="0">
-
-        </div>
-
-        <div class="slider-container" style="margin-top: 10px;">
-            <label for="phaseSpeedSlider">Phase Speed: <span id="phaseSpeedValue">0.05</span></label>
-
-            <input type="range" id="phaseSpeedSlider" min="0" max="0.2" step="0.001" value="0.05">
-        </div>
-        <div class="slider-container" style="margin-top: 10px;">
-            <label for="waveFrequencySlider">Wave Frequency: <span id="waveFrequencyValue">0.004</span></label>
-            <input type="range" id="waveFrequencySlider" min="0.0001" max="3" step="0.001" value="1">
-
-        </div>
-        <div class="slider-container" style="margin-top: 10px;">
-            <label for="waveAmplitudeSlider">Wave Amplitude: <span id="waveAmplitudeValue">400</span></label>
-            <input type="range" id="waveAmplitudeSlider" min="0" max="2000" step="1" value="400">
-
-        </div>
-        <div class="slider-container" style="margin-top: 10px;">
-            <label for="scaleSlider">Scale: <span id="scaleValue">1.00</span></label>
-            <input type="range" id="scaleSlider" min="0.5" max="2" step="0.01" value="1">
-
-        </div>
-        <div style="margin-top: 10px;">
-            <input type="checkbox" id="waveScale">
-            <label for="waveScale">Wave Scale</label>
-        </div>
-        <!-- <div id="togglePoints">
-            <input type="checkbox" id="togglePoints">
-            <label for="togglePoints">Toggle Control Points</label>
-        </div> -->
-        <div id="exportButtons">
-
-            <button id="togglePause">Pause/Resume</button>
-
-            <button id="exportSVG">Export SVG</button>
-
-
-        </div>
-
     </div>
 
-    <div id="showPanelHint" class="show-panel-hint hidden">
-        Press 'C' to show controls
-    </div>
 
-    <button id="showControlsBtn" class="show-controls-btn hidden" title="Show controls panel">
-        <i class="ph ph-sidebar"></i>
-    </button>
 
-    <canvas id="canvas"></canvas>
-
-    <script src="main.js" defer></script>
+    <script src="font-manager.js"></script>
+    <script src="canvas/canvas-manager.js"></script>
+    <script src="shaders/shader-manager.js"></script>
+    <script src="rendering/text-renderer.js"></script>
+    <script src="rendering/background-renderer.js"></script>
+    <script src="rendering/render-pipeline.js"></script>
+    <script src="core/animation-engine.js"></script>
+    <script src="ui-controller.js"></script>
+    <script src="export-manager.js"></script>
+    <script src="main.js"></script>
 </body>
 
 </html>

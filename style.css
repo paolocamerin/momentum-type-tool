@@ -21,6 +21,7 @@ canvas {
 #shader-canvas {
     /* Ensure shader-canvas is above canvas if needed */
     z-index: 1;
+
 }
 
 body {
