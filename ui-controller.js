@@ -104,6 +104,7 @@ function setupEventListeners() {
 
     // Export functionality
     exportSVGBtn.addEventListener('click', ExportManager.exportToSVG);
+    document.getElementById('exportPNGBtn').addEventListener('click', ExportManager.exportToPNG);
 
     // Text input events
     textInput.addEventListener('input', handleTextInput);
@@ -181,12 +182,16 @@ function handleTextInput() {
     if (inputText.trim() === '') {
         words = "Start typing your title";
         userHasTyped = false;
-        typingInfo.classList.remove('fade-out');
+        if (typingInfo) {
+            typingInfo.classList.remove('fade-out');
+        }
     } else {
         words = inputText;
         if (!userHasTyped) {
             userHasTyped = true;
-            typingInfo.classList.add('fade-out');
+            if (typingInfo) {
+                typingInfo.classList.add('fade-out');
+            }
         }
     }
 
