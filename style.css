@@ -220,6 +220,75 @@ button:hover {
     opacity: 0;
 }
 
+/* Color Controls */
+.color-controls {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    padding: 15px;
+    background: rgba(0, 0, 0, 0.05);
+    border-radius: 8px;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.color-picker-group {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+}
+
+.color-picker-group label {
+    font-size: 12px;
+    font-weight: 500;
+    color: #666;
+    margin: 0;
+}
+
+.color-swatch {
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+    border: 2px solid rgba(0, 0, 0, 0.1);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.color-swatch:hover {
+    transform: scale(1.05);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.swap-btn {
+    background: #007AFF;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.swap-btn:hover {
+    background: #0056CC;
+    transform: scale(1.05);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.swap-btn:active {
+    transform: scale(0.95);
+}
+
+.swap-btn i {
+    font-size: 18px;
+}
+
 @media (max-width: 768px) {
     .controls {
         flex-direction: column;
@@ -232,5 +301,15 @@ button:hover {
         bottom: 250px;
         font-size: 12px;
         padding: 8px 15px;
+    }
+
+    .color-controls {
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .color-picker-group {
+        flex-direction: row;
+        gap: 10px;
     }
 }

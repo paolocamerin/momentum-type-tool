@@ -6,6 +6,14 @@ let playPauseBtn, alignmentCheckbox, shaderModeCheckbox, textInput, fontUploadBt
 let phaseValue, ampValue, verticalOffsetValue, marginValue;
 let typingInfo;
 
+// Color picker elements
+let bgColorPicker, textColorPicker, swapColorsBtn;
+let bgPickr, textPickr;
+
+// Color state
+let backgroundColor = '#ffffff';
+let textColor = '#000000';
+
 // State variables (managed by main.js)
 // These are initialized by main.js and passed to initUI()
 
@@ -39,11 +47,19 @@ function initUI(initialWords, initialUserHasTyped, initialWdt) {
     // Get typing info element
     typingInfo = document.querySelector('.typing-info');
 
+    // Get color picker elements
+    bgColorPicker = document.getElementById('bgColorPicker');
+    textColorPicker = document.getElementById('textColorPicker');
+    swapColorsBtn = document.getElementById('swapColorsBtn');
+
     // Initialize text input with default text
     textInput.value = words;
 
     // Initialize alignment state from checkbox
     window.RenderPipeline.setTextAlignment(alignmentCheckbox.checked);
+
+    // Initialize color pickers
+    initColorPickers();
 }
 
 // Setup all event listeners
@@ -94,6 +110,60 @@ function setupEventListeners() {
 
     // Focus text input for immediate use
     textInput.focus();
+
+    // Color picker events
+    swapColorsBtn.addEventListener('click', swapColors);
+}
+
+// Initialize color pickers
+function initColorPickers() {
+    // Initialize background color picker
+    bgPickr = Pickr.create({
+        el: '#bgColorPicker',
+        theme: 'classic',
+        default: backgroundColor,
+        components: {
+            preview: true,
+            hue: true,
+            interaction: { input: true }
+        }
+    });
+
+    // Initialize text color picker
+    textPickr = Pickr.create({
+        el: '#textColorPicker',
+        theme: 'classic',
+        default: textColor,
+        components: {
+            preview: true,
+            hue: true,
+            interaction: { input: true }
+        }
+    });
+
+    // Set initial colors
+    bgPickr.setColor(backgroundColor);
+    textPickr.setColor(textColor);
+
+    // Add event listeners
+    bgPickr.on('change', (color) => {
+        backgroundColor = color.toHEXA().toString();
+    });
+
+    textPickr.on('change', (color) => {
+        textColor = color.toHEXA().toString();
+    });
+}
+
+// Swap colors function
+function swapColors() {
+    const tempColor = backgroundColor;
+    backgroundColor = textColor;
+    textColor = tempColor;
+
+    // Update pickers
+    bgPickr.setColor(backgroundColor);
+    textPickr.setColor(textColor);
 }
 
 // Update slider value displays
@@ -159,12 +229,12 @@ function getCurrentState() {
 
 // Get background color
 function getBackgroundColor() {
-    return '#ffffff';
+    return backgroundColor;
 }
 
 // Get fill color
 function getFillColor() {
-    return '#000000';
+    return textColor;
 }
 
 // Get speed value
