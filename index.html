@@ -9,6 +9,11 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/opentype.js@1.3.4/dist/opentype.js"></script>
     <script src="https://unpkg.com/simplex-noise@2.4.0/simplex-noise.js"></script>
+    <!-- Pickr color picker -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@simonwep/pickr/dist/themes/classic.min.css" />
+    <script src="https://cdn.jsdelivr.net/npm/@simonwep/pickr"></script>
+    <!-- Phosphor Icons for swap button -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
     <link rel="stylesheet" href="style.css">
 </head>
 
@@ -55,6 +60,7 @@
 
         <button id="playPauseBtn">Pause/Play</button>
         <button id="exportSVGBtn">Export SVG</button>
+        <button id="exportPNGBtn">Export PNG</button>
 
         <div class="checkbox-container">
             <input type="checkbox" id="alignmentCheckbox">
@@ -64,6 +70,22 @@
         <div class="checkbox-container">
             <input type="checkbox" id="shaderModeCheckbox">
             <label for="shaderModeCheckbox">Shader Mode</label>
+        </div>
+
+        <div class="color-controls">
+            <div class="color-picker-group">
+                <label>Background</label>
+                <div id="bgColorPicker" class="color-swatch"></div>
+            </div>
+
+            <button id="swapColorsBtn" class="swap-btn" title="Swap colors">
+                <i class="ph ph-arrows-left-right"></i>
+            </button>
+
+            <div class="color-picker-group">
+                <label>Text</label>
+                <div id="textColorPicker" class="color-swatch"></div>
+            </div>
         </div>
     </div>
 

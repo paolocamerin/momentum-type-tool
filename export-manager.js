@@ -1,5 +1,10 @@
 // Export Manager - Handles SVG export functionality
 
+// Utility function for mapping values
+function map(value, inMin, inMax, outMin, outMax) {
+    return (value - inMin) * (outMax - outMin) / (inMax - inMin) + outMin;
+}
+
 function exportToSVG() {
     if (!FontManager.hasFont()) {
         console.warn('No font loaded for SVG export');
@@ -15,6 +20,41 @@ function exportToSVG() {
     svg.setAttribute('height', (window.innerWidth / 16) * 9);
     svg.setAttribute('viewBox', `0 0 ${window.innerWidth} ${(window.innerWidth / 16) * 9}`);
 
+    // Add background rectangle
+    const backgroundRect = document.createElementNS(svgNS, 'rect');
+    backgroundRect.setAttribute('width', '100%');
+    backgroundRect.setAttribute('height', '100%');
+
+    // Check if shader mode is enabled
+    const isShaderMode = window.RenderPipeline.getShaderMode();
+    if (isShaderMode) {
+        // For shader mode, capture the shader canvas and embed it as an image
+        const shaderCanvas = document.getElementById('shader-canvas');
+        if (shaderCanvas) {
+            // Ensure shader is rendered with current state
+            const animationTime = window.AnimationEngine.getAnimationTime();
+            window.ShaderManager.render(animationTime);
+
+            // Convert shader canvas to data URL
+            const shaderDataURL = shaderCanvas.toDataURL('image/png');
+
+            // Create image element for the shader
+            const shaderImage = document.createElementNS(svgNS, 'image');
+            shaderImage.setAttribute('href', shaderDataURL);
+            shaderImage.setAttribute('width', '100%');
+            shaderImage.setAttribute('height', '100%');
+            shaderImage.setAttribute('preserveAspectRatio', 'xMidYMid slice');
+            svg.appendChild(shaderImage);
+        } else {
+            // Fallback to solid color if shader canvas not available
+            backgroundRect.setAttribute('fill', UIController.getBackgroundColor());
+            svg.appendChild(backgroundRect);
+        }
+    } else {
+        backgroundRect.setAttribute('fill', UIController.getBackgroundColor());
+        svg.appendChild(backgroundRect);
+    }
+
     // Create main group for all text
     const group = document.createElementNS(svgNS, 'g');
     svg.appendChild(group);
@@ -25,7 +65,7 @@ function exportToSVG() {
     const phase = state.phase;
     const additionalPhase = state.additionalPhase;
     const rowOffset = state.rowOffset;
-    const rows = AnimationEngine.preProcess(state.words);
+    const rows = window.TextRenderer.preProcess(state.words);
     const isLeftAligned = state.isLeftAligned;
 
     let rowPosition = margin;
@@ -37,7 +77,7 @@ function exportToSVG() {
         // Calculate font size for the row
         let fontSize;
         if (row.length > 20) {
-            fontSize = ((window.innerWidth / 16) * 9) / AnimationEngine.map(row.length, 20, 60, 15, 40);
+            fontSize = ((window.innerWidth / 16) * 9) / map(row.length, 20, 60, 15, 40);
         } else {
             fontSize = ((window.innerWidth / 16) * 9) / 15;
         }
@@ -71,7 +111,7 @@ function exportToSVG() {
                 }).join(' ');
 
                 svgPath.setAttribute('d', pathData);
-                svgPath.setAttribute('fill', state.userHasTyped ? 'black' : '#e6e6e6');
+                svgPath.setAttribute('fill', state.userHasTyped ? UIController.getFillColor() : '#e6e6e6');
                 group.appendChild(svgPath);
 
                 // Move to next character position
@@ -90,7 +130,7 @@ function exportToSVG() {
                 // Apply center alignment intensity reduction
                 let centerAlignmentIntensity;
                 if (row.length > 1) {
-                    centerAlignmentIntensity = 1 - Math.abs(AnimationEngine.map(charIndex, 0, row.length - 1, 1, -1));
+                    centerAlignmentIntensity = 1 - Math.abs(map(charIndex, 0, row.length - 1, 1, -1));
                 } else {
                     centerAlignmentIntensity = 1;
                 }
@@ -115,7 +155,7 @@ function exportToSVG() {
                 }).join(' ');
 
                 svgPath.setAttribute('d', pathData);
-                svgPath.setAttribute('fill', state.userHasTyped ? 'black' : '#e6e6e6');
+                svgPath.setAttribute('fill', state.userHasTyped ? UIController.getFillColor() : '#e6e6e6');
                 group.appendChild(svgPath);
             }
         }
@@ -137,7 +177,73 @@ function exportToSVG() {
     URL.revokeObjectURL(url);
 }
 
+function exportToPNG() {
+    // Get the canvas element
+    const canvas = document.getElementById('canvas');
+    if (!canvas) {
+        console.warn('Canvas not found for PNG export');
+        return;
+    }
+
+    // Create a temporary canvas for high-resolution export
+    const tempCanvas = document.createElement('canvas');
+    const tempCtx = tempCanvas.getContext('2d');
+
+    // Set high resolution (2x for better quality)
+    const scale = 2;
+    tempCanvas.width = canvas.width * scale;
+    tempCanvas.height = canvas.height * scale;
+
+    // Scale the context
+    tempCtx.scale(scale, scale);
+
+    // Get current state
+    const state = UIController.getCurrentState();
+    const backgroundColor = UIController.getBackgroundColor();
+    const fillColor = UIController.getFillColor();
+
+    // Check if shader mode is enabled
+    const isShaderMode = window.RenderPipeline.getShaderMode();
+
+    if (isShaderMode) {
+        // For shader mode, we need to capture the shader canvas
+        const shaderCanvas = document.getElementById('shader-canvas');
+        if (shaderCanvas) {
+            // Ensure shader is rendered with current state
+            const animationTime = window.AnimationEngine.getAnimationTime();
+            window.ShaderManager.render(animationTime);
+
+            // Draw shader background
+            tempCtx.drawImage(shaderCanvas, 0, 0, canvas.width, canvas.height);
+        } else {
+            // Fallback to solid color
+            tempCtx.fillStyle = backgroundColor;
+            tempCtx.fillRect(0, 0, canvas.width, canvas.height);
+        }
+    } else {
+        // Draw solid background
+        tempCtx.fillStyle = backgroundColor;
+        tempCtx.fillRect(0, 0, canvas.width, canvas.height);
+    }
+
+    // Draw the text on top
+    tempCtx.drawImage(canvas, 0, 0);
+
+    // Convert to PNG and download
+    tempCanvas.toBlob((blob) => {
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = 'momentum-type-animation.png';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+    }, 'image/png');
+}
+
 // Export export manager functions
 window.ExportManager = {
-    exportToSVG
+    exportToSVG,
+    exportToPNG
 };
