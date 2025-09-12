@@ -8,11 +8,15 @@ let typingInfo;
 
 // Color picker elements
 let bgColorPicker, textColorPicker, swapColorsBtn;
-let bgPickr, textPickr;
+let bgPickr, textPickr, colorValue1Picker, colorValue2Picker, colorValue3Picker, colorValue4Picker;
 
 // Color state
 let backgroundColor = '#ffffff';
 let textColor = '#000000';
+let color1 = '#6C2EA9';
+let color2 = '#1F123C';
+let color3 = '#250844';
+let color4 = '#495C91';
 
 // State variables (managed by main.js)
 // These are initialized by main.js and passed to initUI()
@@ -51,6 +55,11 @@ function initUI(initialWords, initialUserHasTyped, initialWdt) {
     bgColorPicker = document.getElementById('bgColorPicker');
     textColorPicker = document.getElementById('textColorPicker');
     swapColorsBtn = document.getElementById('swapColorsBtn');
+
+    colorValue1Picker = document.getElementById('colorValue1Picker');
+    colorValue2Picker = document.getElementById('colorValue2Picker');
+    colorValue3Picker = document.getElementById('colorValue3Picker');
+    colorValue4Picker = document.getElementById('colorValue4Picker');
 
     // Initialize text input with default text
     textInput.value = words;
@@ -132,6 +141,9 @@ function initColorPickers() {
         }
     });
 
+
+
+
     // Initialize text color picker
     textPickr = Pickr.create({
         el: '#textColorPicker',
@@ -144,10 +156,64 @@ function initColorPickers() {
         }
     });
 
+    // Initialize color 1 picker
+
+    colorValue1Picker = Pickr.create({
+        el: '#colorValue1Picker',
+        theme: 'classic',
+        default: color1,
+        components: {
+            preview: true,
+            hue: true,
+            interaction: { input: true }
+        }
+    });
+    // Initialize color 2 picker
+
+    colorValue2Picker = Pickr.create({
+        el: '#colorValue2Picker',
+        theme: 'classic',
+        default: color2,
+        components: {
+            preview: true,
+            hue: true,
+            interaction: { input: true }
+        }
+    });
+
+    // Initialize color 3 picker
+
+    colorValue3Picker = Pickr.create({
+        el: '#colorValue3Picker',
+        theme: 'classic',
+        default: color3,
+        components: {
+            preview: true,
+            hue: true,
+            interaction: { input: true }
+        }
+    });
+
+    // Initialize color 4 picker
+
+    colorValue4Picker = Pickr.create({
+        el: '#colorValue4Picker',
+        theme: 'classic',
+        default: color4,
+        components: {
+            preview: true,
+            hue: true,
+            interaction: { input: true }
+        }
+    });
+
     // Set initial colors
     bgPickr.setColor(backgroundColor);
     textPickr.setColor(textColor);
-
+    colorValue1Picker.setColor(color1);
+    colorValue2Picker.setColor(color2);
+    colorValue3Picker.setColor(color3);
+    colorValue4Picker.setColor(color4);
     // Add event listeners
     bgPickr.on('change', (color) => {
         backgroundColor = color.toHEXA().toString();
@@ -155,6 +221,22 @@ function initColorPickers() {
 
     textPickr.on('change', (color) => {
         textColor = color.toHEXA().toString();
+    });
+
+    colorValue1Picker.on('change', (color) => {
+        color1 = color.toHEXA().toString();
+    });
+
+    colorValue2Picker.on('change', (color) => {
+        color2 = color.toHEXA().toString();
+    });
+
+    colorValue3Picker.on('change', (color) => {
+        color3 = color.toHEXA().toString();
+    });
+
+    colorValue4Picker.on('change', (color) => {
+        color4 = color.toHEXA().toString();
     });
 }
 
@@ -167,6 +249,10 @@ function swapColors() {
     // Update pickers
     bgPickr.setColor(backgroundColor);
     textPickr.setColor(textColor);
+    colorValue1Picker.setColor(color1);
+    colorValue2Picker.setColor(color2);
+    colorValue3Picker.setColor(color3);
+    colorValue4Picker.setColor(color4);
 }
 
 // Update slider value displays
@@ -234,6 +320,21 @@ function getCurrentState() {
     };
 }
 
+function hexToRgb(hex) {
+    // Expand shorthand form (e.g. "03F") to full form (e.g. "0033FF")
+    var shorthandRegex = /^#?([a-f\d])([a-f\d])([a-f\d])$/i;
+    hex = hex.replace(shorthandRegex, function (m, r, g, b) {
+        return r + r + g + g + b + b;
+    });
+
+    var result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+    return result ? {
+        r: parseInt(result[1], 16),
+        g: parseInt(result[2], 16),
+        b: parseInt(result[3], 16)
+    } : null;
+}
+
 // Get background color
 function getBackgroundColor() {
     return backgroundColor;
@@ -252,6 +353,30 @@ function getSpeedValue() {
 // Get factor value
 function getFactorValue() {
     return 1.4;
+}
+
+// Get color 1 value
+function getColor1Value() {
+    const color = hexToRgb(color1);
+    return color;
+}
+
+// Get color 2 value
+function getColor2Value() {
+    const color = hexToRgb(color2);
+    return color;
+}
+
+// Get color 3 value
+function getColor3Value() {
+    const color = hexToRgb(color3);
+    return color;
+}
+
+// Get color 4 value
+function getColor4Value() {
+    const color = hexToRgb(color4);
+    return color;
 }
 
 // Video export handlers
@@ -340,6 +465,10 @@ window.UIController = {
     getFillColor,
     getSpeedValue,
     getFactorValue,
+    getColor1Value,
+    getColor2Value,
+    getColor3Value,
+    getColor4Value,
     getWords: () => words,
     getUserHasTyped: () => userHasTyped,
     getWdt: () => wdt,

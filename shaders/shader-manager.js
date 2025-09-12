@@ -43,7 +43,7 @@ class ShaderManager {
     async loadShaders() {
         const [vertSrc, fragSrc] = await Promise.all([
             this.loadShaderFile('shaders/main.vert'),
-            this.loadShaderFile('shaders/main.frag')
+            this.loadShaderFile('shaders/mesh-gradient.frag')
         ]);
 
         const program = this.createShaderProgram(vertSrc, fragSrc);
@@ -56,6 +56,10 @@ class ShaderManager {
         this.uniforms.set('u_point2', this.gl.getUniformLocation(program, 'u_point2'));
         this.uniforms.set('u_point3', this.gl.getUniformLocation(program, 'u_point3'));
         this.uniforms.set('u_point4', this.gl.getUniformLocation(program, 'u_point4'));
+        this.uniforms.set('u_color1', this.gl.getUniformLocation(program, 'u_color1'));
+        this.uniforms.set('u_color2', this.gl.getUniformLocation(program, 'u_color2'));
+        this.uniforms.set('u_color3', this.gl.getUniformLocation(program, 'u_color3'));
+        this.uniforms.set('u_color4', this.gl.getUniformLocation(program, 'u_color4'));
 
         // Set up vertex buffer
         this.setupVertexBuffer();
@@ -199,7 +203,7 @@ class ShaderManager {
     updateNoisePoints(time) {
         if (!this.noise) return;
 
-        this.timeOffset = time * 0.1; // Slow movement
+        this.timeOffset = time * 0.01; // Slow movement
 
         // Update each point with noise
         for (let i = 0; i < this.points.length; i++) {
@@ -223,6 +227,20 @@ class ShaderManager {
         const gl = this.gl;
         const program = this.programs.get('main');
 
+
+        const color1 = window.UIController.getColor1Value();
+        const color2 = window.UIController.getColor2Value();
+        const color3 = window.UIController.getColor3Value();
+        const color4 = window.UIController.getColor4Value();
+
+        // Normalize colors from 0-255 to 0-1 range for WebGL
+        const normalizedColor1 = { r: color1.r / 255.0, g: color1.g / 255.0, b: color1.b / 255.0 };
+        const normalizedColor2 = { r: color2.r / 255.0, g: color2.g / 255.0, b: color2.b / 255.0 };
+        const normalizedColor3 = { r: color3.r / 255.0, g: color3.g / 255.0, b: color3.b / 255.0 };
+        const normalizedColor4 = { r: color4.r / 255.0, g: color4.g / 255.0, b: color4.b / 255.0 };
+
+        console.log('Original colors (0-255):', color1, color2, color3, color4);
+        console.log('Normalized colors (0-1):', normalizedColor1, normalizedColor2, normalizedColor3, normalizedColor4);
         if (!program) return;
 
         // Update noise-based points
@@ -247,6 +265,12 @@ class ShaderManager {
         gl.uniform2f(this.uniforms.get('u_point2'), this.points[1].x, this.points[1].y);
         gl.uniform2f(this.uniforms.get('u_point3'), this.points[2].x, this.points[2].y);
         gl.uniform2f(this.uniforms.get('u_point4'), this.points[3].x, this.points[3].y);
+
+
+        gl.uniform3f(this.uniforms.get('u_color1'), normalizedColor1.r, normalizedColor1.g, normalizedColor1.b);
+        gl.uniform3f(this.uniforms.get('u_color2'), normalizedColor2.r, normalizedColor2.g, normalizedColor2.b);
+        gl.uniform3f(this.uniforms.get('u_color3'), normalizedColor3.r, normalizedColor3.g, normalizedColor3.b);
+        gl.uniform3f(this.uniforms.get('u_color4'), normalizedColor4.r, normalizedColor4.g, normalizedColor4.b);
 
         // Set up vertex attributes
         gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffer);
