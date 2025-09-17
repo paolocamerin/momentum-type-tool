@@ -206,6 +206,11 @@ async function handleFontUpload(e) {
         await storeFont(file, buffer);
         await createFontSelector();
         console.log(`Font stored: ${file.name}`);
+
+        // Trigger re-render if paused
+        if (window.UIController && window.UIController.triggerRenderIfPaused) {
+            window.UIController.triggerRenderIfPaused();
+        }
     } catch (err) {
         console.error('Error processing font:', err);
     }
@@ -217,6 +222,11 @@ async function handleFontChange(e) {
     try {
         const fontData = await loadStoredFont(e.target.value);
         await processFontData(fontData.data, fontData.name);
+
+        // Trigger re-render if paused
+        if (window.UIController && window.UIController.triggerRenderIfPaused) {
+            window.UIController.triggerRenderIfPaused();
+        }
     } catch (err) {
         console.error('Error loading stored font:', err);
     }

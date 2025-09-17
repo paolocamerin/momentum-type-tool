@@ -71,6 +71,32 @@ class AnimationEngine {
         }
     }
 
+    // Render a single frame (useful when paused)
+    renderSingleFrame() {
+        // Get current state from UI - EXACTLY like animate() does
+        const currentWords = UIController.getWords();
+        const currentUserHasTyped = UIController.getUserHasTyped();
+        const animationTime = this.getAnimationTime();
+
+        // Get canvas dimensions
+        const dimensions = window.CanvasManager.getDimensions();
+
+        // Get colors from UI
+        const backgroundColor = UIController.getBackgroundColor();
+        const fillColor = UIController.getFillColor();
+
+        // Render frame using render pipeline - EXACTLY like animate() does
+        window.RenderPipeline.render(
+            currentWords,
+            currentUserHasTyped,
+            animationTime,
+            dimensions.width,
+            dimensions.height,
+            backgroundColor,
+            fillColor
+        );
+    }
+
     // Get playback status
     getIsPlaying() {
         return this.isPlaying;

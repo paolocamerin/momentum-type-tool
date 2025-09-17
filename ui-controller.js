@@ -18,6 +18,12 @@ let color2 = '#1F123C';
 let color3 = '#250844';
 let color4 = '#495C91';
 
+// Text history variables
+let textHistory = [];
+let saveTextTimeout = null;
+const TEXT_SAVE_DELAY = 2000; // 2 seconds delay
+const MAX_HISTORY_ITEMS = 20;
+
 // State variables (managed by main.js)
 // These are initialized by main.js and passed to initUI()
 
@@ -104,10 +110,14 @@ function setupEventListeners() {
 
     alignmentCheckbox.addEventListener('change', () => {
         window.RenderPipeline.setTextAlignment(alignmentCheckbox.checked);
+        // Trigger re-render if paused
+        triggerRenderIfPaused();
     });
 
     shaderModeCheckbox.addEventListener('change', () => {
         window.RenderPipeline.setShaderMode(shaderModeCheckbox.checked);
+        // Trigger re-render if paused
+        triggerRenderIfPaused();
     });
 
     fontUploadBtn.addEventListener('click', () => fontFile.click());
@@ -127,6 +137,13 @@ function setupEventListeners() {
     textInput.addEventListener('input', handleTextInput);
     textInput.addEventListener('focus', handleTextFocus);
     textInput.addEventListener('blur', handleTextBlur);
+
+    // Text history events
+    document.getElementById('historyBtn').addEventListener('click', toggleHistoryDropdown);
+    document.getElementById('clearHistoryBtn').addEventListener('click', clearTextHistory);
+
+    // Close history dropdown when clicking outside
+    document.addEventListener('click', handleDocumentClick);
 
     // Initialize placeholder state
     handleTextInput(); // Set initial state
@@ -228,26 +245,38 @@ function initColorPickers() {
     // Add event listeners
     bgPickr.on('change', (color) => {
         backgroundColor = color.toHEXA().toString();
+        // Trigger re-render if paused
+        triggerRenderIfPaused();
     });
 
     textPickr.on('change', (color) => {
         textColor = color.toHEXA().toString();
+        // Trigger re-render if paused
+        triggerRenderIfPaused();
     });
 
     colorValue1Picker.on('change', (color) => {
         color1 = color.toHEXA().toString();
+        // Trigger re-render if paused
+        triggerRenderIfPaused();
     });
 
     colorValue2Picker.on('change', (color) => {
         color2 = color.toHEXA().toString();
+        // Trigger re-render if paused
+        triggerRenderIfPaused();
     });
 
     colorValue3Picker.on('change', (color) => {
         color3 = color.toHEXA().toString();
+        // Trigger re-render if paused
+        triggerRenderIfPaused();
     });
 
     colorValue4Picker.on('change', (color) => {
         color4 = color.toHEXA().toString();
+        // Trigger re-render if paused
+        triggerRenderIfPaused();
     });
 }
 
@@ -264,6 +293,9 @@ function swapColors() {
     colorValue2Picker.setColor(color2);
     colorValue3Picker.setColor(color3);
     colorValue4Picker.setColor(color4);
+
+    // Trigger re-render if paused
+    triggerRenderIfPaused();
 }
 
 // Update slider value displays
@@ -273,6 +305,9 @@ function updateSliderValues() {
     verticalOffsetValue.textContent = getVerticalOffsetValue().toFixed(2);
     marginValue.textContent = Math.round(getMarginValue());
     falloffValue.textContent = getFalloffValue().toFixed(1);
+
+    // If animation is paused, trigger a single frame render to show changes
+    triggerRenderIfPaused();
 }
 
 // Handle text input changes
@@ -306,6 +341,19 @@ function handleTextInput() {
 
     // Pass both text and placeholder flag to render pipeline
     window.RenderPipeline.setText(words, !hasActualContent);
+
+    // Debounced text history saving
+    if (hasActualContent) {
+        // Clear previous timeout
+        if (saveTextTimeout) {
+            clearTimeout(saveTextTimeout);
+        }
+
+        // Set new timeout to save text after delay
+        saveTextTimeout = setTimeout(() => {
+            saveTextToHistory(inputText.trim());
+        }, TEXT_SAVE_DELAY);
+    }
 }
 
 // Handle text input focus - clear placeholder behavior
@@ -526,5 +574,144 @@ window.UIController = {
     getWords: () => words,
     getUserHasTyped: () => userHasTyped,
     getWdt: () => wdt,
-    setWdt: (value) => { wdt = value; }
+    setWdt: (value) => { wdt = value; },
+    triggerRenderIfPaused: triggerRenderIfPaused
 };
+
+// Utility function to trigger re-render when paused
+function triggerRenderIfPaused() {
+    if (window.AnimationEngine && !window.AnimationEngine.getIsPlaying()) {
+        window.AnimationEngine.renderSingleFrame();
+    }
+}
+
+// Text History Functions
+function loadTextHistory() {
+    try {
+        const stored = localStorage.getItem('textHistory');
+        if (stored) {
+            textHistory = JSON.parse(stored);
+        }
+    } catch (error) {
+        console.warn('Failed to load text history:', error);
+        textHistory = [];
+    }
+}
+
+function saveTextToHistory(text) {
+    // Don't save empty or very short texts
+    if (!text || text.length < 2) return;
+
+    // Don't save if it's the same as the last entry
+    if (textHistory.length > 0 && textHistory[0].text === text) return;
+
+    // Create history entry
+    const historyEntry = {
+        text: text,
+        timestamp: Date.now(),
+        date: new Date().toLocaleString()
+    };
+
+    // Remove any existing duplicate
+    textHistory = textHistory.filter(item => item.text !== text);
+
+    // Add to beginning of array
+    textHistory.unshift(historyEntry);
+
+    // Limit history size
+    if (textHistory.length > MAX_HISTORY_ITEMS) {
+        textHistory = textHistory.slice(0, MAX_HISTORY_ITEMS);
+    }
+
+    // Save to localStorage
+    try {
+        localStorage.setItem('textHistory', JSON.stringify(textHistory));
+    } catch (error) {
+        console.warn('Failed to save text history:', error);
+    }
+
+    // Update UI if dropdown is open
+    if (!document.getElementById('historyDropdown').classList.contains('hidden')) {
+        updateHistoryDropdown();
+    }
+}
+
+function toggleHistoryDropdown(event) {
+    event.stopPropagation();
+    const dropdown = document.getElementById('historyDropdown');
+
+    if (dropdown.classList.contains('hidden')) {
+        // Show dropdown
+        updateHistoryDropdown();
+        dropdown.classList.remove('hidden');
+    } else {
+        // Hide dropdown
+        dropdown.classList.add('hidden');
+    }
+}
+
+function updateHistoryDropdown() {
+    const historyList = document.getElementById('historyList');
+
+    if (textHistory.length === 0) {
+        historyList.innerHTML = '<div class="history-empty">No previous texts yet</div>';
+        return;
+    }
+
+    historyList.innerHTML = textHistory.map(item => `
+        <div class="history-item" data-text="${item.text.replace(/"/g, '&quot;')}">
+            <span class="history-item-text">${item.text}</span>
+            <span class="history-item-date">${item.date}</span>
+        </div>
+    `).join('');
+
+    // Add click listeners to history items
+    historyList.querySelectorAll('.history-item').forEach(item => {
+        item.addEventListener('click', () => {
+            const text = item.dataset.text;
+            selectHistoryText(text);
+        });
+    });
+}
+
+function selectHistoryText(text) {
+    // Set the text input value
+    textInput.value = text;
+
+    // Trigger input handler to update state
+    handleTextInput();
+
+    // Hide dropdown
+    document.getElementById('historyDropdown').classList.add('hidden');
+
+    // Focus text input
+    textInput.focus();
+}
+
+function clearTextHistory() {
+    textHistory = [];
+
+    try {
+        localStorage.removeItem('textHistory');
+    } catch (error) {
+        console.warn('Failed to clear text history:', error);
+    }
+
+    // Update UI
+    updateHistoryDropdown();
+}
+
+function handleDocumentClick(event) {
+    const dropdown = document.getElementById('historyDropdown');
+    const historyBtn = document.getElementById('historyBtn');
+
+    // If clicking outside dropdown and button, close dropdown
+    if (!dropdown.contains(event.target) && !historyBtn.contains(event.target)) {
+        dropdown.classList.add('hidden');
+    }
+}
+
+// Initialize text history on load
+document.addEventListener('DOMContentLoaded', () => {
+    loadTextHistory();
+});
