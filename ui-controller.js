@@ -77,6 +77,9 @@ function initUI(initialWords, initialUserHasTyped, initialWdt) {
 
     // Initialize color pickers
     initColorPickers();
+
+    // Set initial state of gradient color pickers based on shader mode
+    toggleGradientColorPickers(shaderModeCheckbox.checked);
 }
 
 // Setup all event listeners
@@ -115,7 +118,12 @@ function setupEventListeners() {
     });
 
     shaderModeCheckbox.addEventListener('change', () => {
-        window.RenderPipeline.setShaderMode(shaderModeCheckbox.checked);
+        const isShaderMode = shaderModeCheckbox.checked;
+        window.RenderPipeline.setShaderMode(isShaderMode);
+
+        // Enable/disable gradient color pickers based on shader mode
+        toggleGradientColorPickers(isShaderMode);
+
         // Trigger re-render if paused
         triggerRenderIfPaused();
     });
@@ -160,12 +168,16 @@ function initColorPickers() {
     // Initialize background color picker
     bgPickr = Pickr.create({
         el: '#bgColorPicker',
-        theme: 'classic',
+        theme: 'nano',
         default: backgroundColor,
         components: {
             preview: true,
             hue: true,
-            interaction: { input: true }
+            interaction: {
+                input: true,
+                clear: true,
+                save: true
+            }
         }
     });
 
@@ -175,12 +187,16 @@ function initColorPickers() {
     // Initialize text color picker
     textPickr = Pickr.create({
         el: '#textColorPicker',
-        theme: 'classic',
+        theme: 'nano',
         default: textColor,
         components: {
             preview: true,
             hue: true,
-            interaction: { input: true }
+            interaction: {
+                input: true,
+                clear: true,
+                save: true
+            }
         }
     });
 
@@ -188,24 +204,32 @@ function initColorPickers() {
 
     colorValue1Picker = Pickr.create({
         el: '#colorValue1Picker',
-        theme: 'classic',
+        theme: 'nano',
         default: color1,
         components: {
             preview: true,
             hue: true,
-            interaction: { input: true }
+            interaction: {
+                input: true,
+                clear: true,
+                save: true
+            }
         }
     });
     // Initialize color 2 picker
 
     colorValue2Picker = Pickr.create({
         el: '#colorValue2Picker',
-        theme: 'classic',
+        theme: 'nano',
         default: color2,
         components: {
             preview: true,
             hue: true,
-            interaction: { input: true }
+            interaction: {
+                input: true,
+                clear: true,
+                save: true
+            }
         }
     });
 
@@ -213,12 +237,16 @@ function initColorPickers() {
 
     colorValue3Picker = Pickr.create({
         el: '#colorValue3Picker',
-        theme: 'classic',
+        theme: 'nano',
         default: color3,
         components: {
             preview: true,
             hue: true,
-            interaction: { input: true }
+            interaction: {
+                input: true,
+                clear: true,
+                save: true
+            }
         }
     });
 
@@ -226,12 +254,16 @@ function initColorPickers() {
 
     colorValue4Picker = Pickr.create({
         el: '#colorValue4Picker',
-        theme: 'classic',
+        theme: 'nano',
         default: color4,
         components: {
             preview: true,
             hue: true,
-            interaction: { input: true }
+            interaction: {
+                input: true,
+                clear: true,
+                save: true
+            }
         }
     });
 
@@ -244,40 +276,129 @@ function initColorPickers() {
     colorValue4Picker.setColor(color4);
     // Add event listeners
     bgPickr.on('change', (color) => {
-        backgroundColor = color.toHEXA().toString();
-        // Trigger re-render if paused
-        triggerRenderIfPaused();
+        try {
+            backgroundColor = color.toHEXA().toString();
+            bgPickr.setColor(backgroundColor);
+            console.log('Background color changed to:', backgroundColor);
+            // Trigger re-render if paused
+            triggerRenderIfPaused();
+        } catch (error) {
+            console.error('Error setting background color:', error);
+        }
     });
 
     textPickr.on('change', (color) => {
-        textColor = color.toHEXA().toString();
-        // Trigger re-render if paused
-        triggerRenderIfPaused();
+        try {
+            textColor = color.toHEXA().toString();
+            textPickr.setColor(textColor);
+            console.log('Text color changed to:', textColor);
+            // Trigger re-render if paused
+            triggerRenderIfPaused();
+        } catch (error) {
+            console.error('Error setting text color:', error);
+        }
     });
 
     colorValue1Picker.on('change', (color) => {
-        color1 = color.toHEXA().toString();
-        // Trigger re-render if paused
-        triggerRenderIfPaused();
+        try {
+            color1 = color.toHEXA().toString();
+            colorValue1Picker.setColor(color1);
+            console.log('Color1 changed to:', color1);
+            // Trigger re-render if paused
+            triggerRenderIfPaused();
+        } catch (error) {
+            console.error('Error setting color1:', error);
+        }
     });
 
     colorValue2Picker.on('change', (color) => {
-        color2 = color.toHEXA().toString();
-        // Trigger re-render if paused
-        triggerRenderIfPaused();
+        try {
+            color2 = color.toHEXA().toString();
+            colorValue2Picker.setColor(color2);
+            console.log('Color2 changed to:', color2);
+            // Trigger re-render if paused
+            triggerRenderIfPaused();
+        } catch (error) {
+            console.error('Error setting color2:', error);
+        }
     });
 
     colorValue3Picker.on('change', (color) => {
-        color3 = color.toHEXA().toString();
-        // Trigger re-render if paused
-        triggerRenderIfPaused();
+        try {
+            color3 = color.toHEXA().toString();
+            colorValue3Picker.setColor(color3);
+            console.log('Color3 changed to:', color3);
+            // Trigger re-render if paused
+            triggerRenderIfPaused();
+        } catch (error) {
+            console.error('Error setting color3:', error);
+        }
     });
 
     colorValue4Picker.on('change', (color) => {
-        color4 = color.toHEXA().toString();
-        // Trigger re-render if paused
-        triggerRenderIfPaused();
+        try {
+            color4 = color.toHEXA().toString();
+            colorValue4Picker.setColor(color4);
+            console.log('Color4 changed to:', color4);
+            // Trigger re-render if paused
+            triggerRenderIfPaused();
+        } catch (error) {
+            console.error('Error setting color4:', error);
+        }
     });
+}
+
+// Toggle gradient color pickers and falloff slider based on shader mode
+function toggleGradientColorPickers(enabled) {
+    const gradientSwatches = document.querySelector('.gradient-swatches');
+    const falloffSlider = document.getElementById('falloffSlider');
+    if (!gradientSwatches) return;
+
+    // Get all gradient color picker elements
+    const colorPickers = [
+        colorValue1Picker,
+        colorValue2Picker,
+        colorValue3Picker,
+        colorValue4Picker
+    ];
+
+    if (enabled) {
+        // Enable gradient color pickers
+        gradientSwatches.style.opacity = '1';
+        gradientSwatches.style.pointerEvents = 'auto';
+        gradientSwatches.classList.remove('disabled');
+
+        // Enable falloff slider
+        if (falloffSlider) {
+            falloffSlider.disabled = false;
+            falloffSlider.style.opacity = '1';
+        }
+
+        // Re-enable Pickr instances
+        colorPickers.forEach(picker => {
+            if (picker) {
+                picker.enable();
+            }
+        });
+    } else {
+        // Disable gradient color pickers
+        gradientSwatches.style.opacity = '0.3';
+        gradientSwatches.style.pointerEvents = 'none';
+        gradientSwatches.classList.add('disabled');
+
+        // Disable falloff slider
+        if (falloffSlider) {
+            falloffSlider.disabled = true;
+            falloffSlider.style.opacity = '0.3';
+        }
+
+        // Disable Pickr instances
+        colorPickers.forEach(picker => {
+            if (picker) {
+                picker.disable();
+            }
+        });
+    }
 }
 
 // Swap colors function
@@ -501,24 +622,40 @@ function getFalloffValue() {
 // Get color 1 value
 function getColor1Value() {
     const color = hexToRgb(color1);
+    if (!color) {
+        console.warn('Invalid color1 hex value:', color1, 'using default');
+        return hexToRgb('#6C2EA9'); // Default purple
+    }
     return color;
 }
 
 // Get color 2 value
 function getColor2Value() {
     const color = hexToRgb(color2);
+    if (!color) {
+        console.warn('Invalid color2 hex value:', color2, 'using default');
+        return hexToRgb('#1F123C'); // Default dark purple
+    }
     return color;
 }
 
 // Get color 3 value
 function getColor3Value() {
     const color = hexToRgb(color3);
+    if (!color) {
+        console.warn('Invalid color3 hex value:', color3, 'using default');
+        return hexToRgb('#250844'); // Default dark purple
+    }
     return color;
 }
 
 // Get color 4 value
 function getColor4Value() {
     const color = hexToRgb(color4);
+    if (!color) {
+        console.warn('Invalid color4 hex value:', color4, 'using default');
+        return hexToRgb('#495C91'); // Default blue
+    }
     return color;
 }
 

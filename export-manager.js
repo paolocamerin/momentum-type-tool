@@ -72,18 +72,34 @@ function exportToSVG() {
     const rows = window.TextRenderer.preProcess(state.words);
     const isLeftAligned = state.isLeftAligned;
 
-    let rowPosition = margin;
-    const lineHeight = ((window.innerWidth / 16) * 9) / 10;
+    // Use fixed export dimensions for calculations
+    const canvasWidth = exportWidth;
+    const canvasHeight = exportHeight;
+
+    let rowPosition = 0;
+    const lineHeightMultiplier = 1.25; // Match text renderer
 
     for (let rowIndex = 0; rowIndex < rows.length; rowIndex++) {
         const row = rows[rowIndex];
 
-        // Calculate font size for the row
+        // Calculate font size for the row using fixed dimensions
         let fontSize;
         if (row.length > 20) {
-            fontSize = ((window.innerWidth / 16) * 9) / map(row.length, 20, 60, 15, 40);
+            fontSize = canvasHeight / map(row.length, 20, 60, 15, 40);
         } else {
-            fontSize = ((window.innerWidth / 16) * 9) / 15;
+            fontSize = canvasHeight / 15;
+        }
+
+        // Calculate row position using font metrics (matching text renderer)
+        if (rowIndex === 0) {
+            // Get font metrics for first row
+            const glyph = font.charToGlyph('M');
+            const ascent = (font.ascender || 0.8 * font.unitsPerEm) * (fontSize / font.unitsPerEm);
+            rowPosition = margin + ascent;
+        } else {
+            // Add line height for subsequent rows
+            const prevFontSize = rowIndex === 1 ? fontSize : canvasHeight / 15; // Approximate previous font size
+            rowPosition += Math.max(prevFontSize * lineHeightMultiplier, 10);
         }
 
         if (isLeftAligned) {
@@ -96,7 +112,8 @@ function exportToSVG() {
                 const glyph = font.charToGlyph(character.toUpperCase());
                 const currentCharWidth = glyph.advanceWidth * (fontSize / font.unitsPerEm);
 
-                const finalX = charIndex == 0 ? margin : x + ((Math.sin(phase + additionalPhase) * .5 + .5) * ampl) * oscillationOffset * 1 / row.length * charIndex;
+                const angle = phase + additionalPhase + (rowIndex + 1) * rowOffset;
+                const finalX = charIndex == 0 ? margin : x + ((Math.sin(angle) * .5 + .5) * ampl * 0.1) * oscillationOffset * 1 / row.length * charIndex;
 
                 // Create SVG path element
                 const path = font.getPath(character.toUpperCase(), finalX, rowPosition, fontSize);
@@ -140,7 +157,26 @@ function exportToSVG() {
                 }
                 const horizontalOffset = baseSineValue * centerAlignmentIntensity;
 
-                const x = (state.wdt / (row.length - 1)) * charIndex + horizontalOffset + margin;
+                // Calculate row width for center alignment using fixed dimensions
+                const rowWidths = [];
+                let rowTotalWidth = 0;
+                for (let i = 0; i < row.length; i++) {
+                    const glyph = font.charToGlyph(row[i].toUpperCase());
+                    const width = glyph.advanceWidth * (fontSize / font.unitsPerEm);
+                    rowWidths.push(width);
+                    rowTotalWidth += width;
+                }
+
+                const gaps = Math.max(row.length - 1, 1);
+                const extraSpace = Math.max(canvasWidth - margin * 2 - rowTotalWidth, 0);
+                const gapIncrement = extraSpace / gaps;
+
+                let cumulativeX = margin;
+                for (let i = 0; i < charIndex; i++) {
+                    cumulativeX += rowWidths[i] + (i < row.length - 1 ? gapIncrement : 0);
+                }
+
+                const x = cumulativeX + horizontalOffset;
 
                 // Create SVG path element
                 const path = font.getPath(character.toUpperCase(), x, rowPosition, fontSize);
@@ -163,8 +199,6 @@ function exportToSVG() {
                 group.appendChild(svgPath);
             }
         }
-
-        rowPosition += lineHeight;
     }
 
     // Create and download the SVG file

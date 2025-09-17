@@ -19,9 +19,10 @@ class ShaderManager {
     }
 
     // Initialize WebGL context and load shaders
-    async init(canvas) {
-        this.canvas = canvas;
-        this.gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+    async init() {
+        // Use display shader canvas for rendering (we'll switch contexts as needed)
+        this.canvas = window.CanvasManager.getShaderCanvas();
+        this.gl = window.CanvasManager.getShaderContext();
 
         if (!this.gl) {
             console.error('[ShaderManager] WebGL not supported');
@@ -255,11 +256,29 @@ class ShaderManager {
         const color3 = window.UIController.getColor3Value();
         const color4 = window.UIController.getColor4Value();
 
-        // Normalize colors from 0-255 to 0-1 range for WebGL
-        const normalizedColor1 = { r: color1.r / 255.0, g: color1.g / 255.0, b: color1.b / 255.0 };
-        const normalizedColor2 = { r: color2.r / 255.0, g: color2.g / 255.0, b: color2.b / 255.0 };
-        const normalizedColor3 = { r: color3.r / 255.0, g: color3.g / 255.0, b: color3.b / 255.0 };
-        const normalizedColor4 = { r: color4.r / 255.0, g: color4.g / 255.0, b: color4.b / 255.0 };
+        // Check if colors are valid before normalizing
+        let normalizedColor1, normalizedColor2, normalizedColor3, normalizedColor4;
+
+        if (!color1 || !color2 || !color3 || !color4) {
+            console.warn('Some colors are null, using defaults:', { color1, color2, color3, color4 });
+            // Use default colors if any are null
+            const defaultColor1 = color1 || { r: 108, g: 46, b: 169 }; // #6C2EA9
+            const defaultColor2 = color2 || { r: 31, g: 18, b: 60 };   // #1F123C
+            const defaultColor3 = color3 || { r: 37, g: 8, b: 68 };    // #250844
+            const defaultColor4 = color4 || { r: 73, g: 92, b: 145 };  // #495C91
+
+            // Normalize colors from 0-255 to 0-1 range for WebGL
+            normalizedColor1 = { r: defaultColor1.r / 255.0, g: defaultColor1.g / 255.0, b: defaultColor1.b / 255.0 };
+            normalizedColor2 = { r: defaultColor2.r / 255.0, g: defaultColor2.g / 255.0, b: defaultColor2.b / 255.0 };
+            normalizedColor3 = { r: defaultColor3.r / 255.0, g: defaultColor3.g / 255.0, b: defaultColor3.b / 255.0 };
+            normalizedColor4 = { r: defaultColor4.r / 255.0, g: defaultColor4.g / 255.0, b: defaultColor4.b / 255.0 };
+        } else {
+            // Normalize colors from 0-255 to 0-1 range for WebGL
+            normalizedColor1 = { r: color1.r / 255.0, g: color1.g / 255.0, b: color1.b / 255.0 };
+            normalizedColor2 = { r: color2.r / 255.0, g: color2.g / 255.0, b: color2.b / 255.0 };
+            normalizedColor3 = { r: color3.r / 255.0, g: color3.g / 255.0, b: color3.b / 255.0 };
+            normalizedColor4 = { r: color4.r / 255.0, g: color4.g / 255.0, b: color4.b / 255.0 };
+        }
 
         // console.log('Original colors (0-255):', color1, color2, color3, color4);
         // console.log('Normalized colors (0-1):', normalizedColor1, normalizedColor2, normalizedColor3, normalizedColor4);

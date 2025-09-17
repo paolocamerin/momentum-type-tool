@@ -18,10 +18,9 @@ class BackgroundRenderer {
     // Render background
     render(ctx, canvasWidth, canvasHeight, backgroundColor, time) {
         if (this.shaderMode) {
-            // Shader mode: render shader background
-            window.ShaderManager.render(time);
-            // Clear 2D canvas to show shader through
+            // Shader mode: Clear 2D canvas first, then render shader background
             ctx.clearRect(0, 0, canvasWidth, canvasHeight);
+            window.ShaderManager.render(time);
         } else {
             // Solid color mode: render solid background
             ctx.fillStyle = backgroundColor;

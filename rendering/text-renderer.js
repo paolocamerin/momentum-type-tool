@@ -95,17 +95,14 @@ class TextRenderer {
 
     // Render a single character
     renderCharacter(ctx, character, x, y, fontSize, userHasTyped, fillColor) {
-        // Determine color based on placeholder state and user input
+        // Determine color based on user input state
         let textColor;
-        if (this.isPlaceholder) {
-            // Placeholder text - light grey with reduced opacity
-            textColor = '#c0c0c0';
-        } else if (userHasTyped) {
+        if (userHasTyped) {
             // Actual user content
             textColor = fillColor;
         } else {
-            // Default state (shouldn't happen with new logic, but keeping as fallback)
-            textColor = '#e6e6e6';
+            // Placeholder text - light grey with reduced opacity
+            textColor = '#c0c0c0';
         }
 
         if (FontManager.hasFont()) {
@@ -114,7 +111,7 @@ class TextRenderer {
             const path = font.getPath(character.toUpperCase(), x, y, fontSize);
 
             // Apply reduced opacity for placeholder
-            if (this.isPlaceholder) {
+            if (!userHasTyped) {
                 ctx.save();
                 ctx.globalAlpha = 0.4; // Reduced opacity for placeholder
             }
@@ -132,7 +129,7 @@ class TextRenderer {
             });
             ctx.fill();
 
-            if (this.isPlaceholder) {
+            if (!userHasTyped) {
                 ctx.restore(); // Restore normal opacity
             }
         } else {
@@ -141,7 +138,7 @@ class TextRenderer {
             ctx.textBaseline = 'alphabetic';
 
             // Apply reduced opacity for placeholder
-            if (this.isPlaceholder) {
+            if (!userHasTyped) {
                 ctx.save();
                 ctx.globalAlpha = 0.4; // Reduced opacity for placeholder
             }
@@ -150,7 +147,7 @@ class TextRenderer {
             ctx.font = `${fontSize}px Inter, sans-serif`;
             ctx.fillText(character.toUpperCase(), x, y);
 
-            if (this.isPlaceholder) {
+            if (!userHasTyped) {
                 ctx.restore(); // Restore normal opacity
             }
         }
@@ -196,6 +193,15 @@ class TextRenderer {
         const factor = UIController.getFactorValue();
         const rows = this.preProcess(words);
         const usableWidth = canvasWidth - UIController.getMarginValue() * 2;
+
+        // console.log('[TextRenderer] Calculating positions:', {
+        //     words: words.substring(0, 20) + '...',
+        //     canvasWidth,
+        //     canvasHeight,
+        //     margin,
+        //     rows: rows.length,
+        //     usableWidth
+        // });
 
         const characters = [];
         let rowPosition = 0;
@@ -306,6 +312,8 @@ class TextRenderer {
     render(ctx, words, userHasTyped, animationTime, canvasWidth, canvasHeight, fillColor) {
         const characters = this.calculateCharacterPositions(ctx, words, userHasTyped, animationTime, canvasWidth, canvasHeight);
 
+        // console.log('[TextRenderer] Rendering', characters.length, 'characters');
+
         for (const char of characters) {
             this.renderCharacter(ctx, char.character, char.x, char.y, char.fontSize, char.userHasTyped, fillColor);
         }
@@ -313,8 +321,10 @@ class TextRenderer {
 
     // Render text for export at fixed resolution (1920x1080)
     renderForExport(ctx, words, userHasTyped, animationTime, exportWidth, exportHeight, fillColor) {
+        console.log('[TextRenderer] renderForExport called with dimensions:', exportWidth, 'x', exportHeight);
         const characters = this.calculateCharacterPositions(ctx, words, userHasTyped, animationTime, exportWidth, exportHeight);
 
+        console.log('[TextRenderer] Calculated', characters.length, 'characters for export');
         for (const char of characters) {
             this.renderCharacter(ctx, char.character, char.x, char.y, char.fontSize, char.userHasTyped, fillColor);
         }
