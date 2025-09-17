@@ -30,7 +30,7 @@ let isExporting = false;
  * @param {string} [options.quality='high'] - Quality: 'low', 'medium', 'high'
  * @param {Function} [options.onProgress] - Progress callback: (progress) => void
  */
-async function exportCanvasToMP4({ canvas, durationSec = 5, quality = 'high', onProgress }) {
+async function exportCanvasToMP4({ canvas, durationSec = 15, quality = 'ultra', onProgress }) {
     console.log('🎬 Starting video export using MediaRecorder approach...');
 
     if (!canvas) {
@@ -44,8 +44,7 @@ async function exportCanvasToMP4({ canvas, durationSec = 5, quality = 'high', on
     isExporting = true;
 
     // Show progress UI
-    const progressDiv = createProgressUI();
-    document.body.appendChild(progressDiv);
+    showProgressUI();
 
     try {
         console.log('📊 Canvas info:', {
@@ -60,14 +59,15 @@ async function exportCanvasToMP4({ canvas, durationSec = 5, quality = 'high', on
         const hasContent = imageData.data.some(pixel => pixel !== 0);
         console.log('🎨 Canvas has content:', hasContent);
 
-        // Determine quality settings
+        // Determine quality settings (increased for better quality)
         const qualitySettings = {
-            low: 1000000,
-            medium: 4000000,
-            high: 8000000
+            low: 2000000,    // 2 Mbps
+            medium: 8000000, // 8 Mbps
+            high: 16000000,  // 16 Mbps
+            ultra: 32000000  // 32 Mbps
         };
 
-        const bitrate = qualitySettings[quality] || qualitySettings.high;
+        const bitrate = qualitySettings[quality] || qualitySettings.ultra;
         console.log('⚙️ Quality settings:', { quality, bitrate });
 
         // Create a temporary canvas for recording at fixed 1920x1080 resolution
@@ -78,7 +78,7 @@ async function exportCanvasToMP4({ canvas, durationSec = 5, quality = 'high', on
 
         // Get canvas stream
         console.log('🎥 Getting canvas stream...');
-        const stream = tempCanvas.captureStream(30);
+        const stream = tempCanvas.captureStream(60);
         console.log('✅ Canvas stream created');
 
         // Set up MediaRecorder - MP4 ONLY
@@ -119,8 +119,8 @@ async function exportCanvasToMP4({ canvas, durationSec = 5, quality = 'high', on
         console.log('🚀 Starting recording...');
         recorder.start(100); // Collect data every 100ms
 
-        // Render animation frames
-        const fps = 30;
+        // Render animation frames at 60fps
+        const fps = 60;
         const totalFrames = Math.floor(durationSec * fps);
         const frameInterval = 1000 / fps;
 
@@ -141,7 +141,7 @@ async function exportCanvasToMP4({ canvas, durationSec = 5, quality = 'high', on
             window.RenderPipeline.renderForExport(tempCtx, tempCanvas.width, tempCanvas.height, tSec);
 
             const progress = (frameIndex + 1) / totalFrames;
-            updateProgress(progressDiv, progress);
+            updateProgress(progress);
 
             if (onProgress) {
                 onProgress(progress);
@@ -191,9 +191,7 @@ async function exportCanvasToMP4({ canvas, durationSec = 5, quality = 'high', on
         showError(`Video export failed: ${error.message}`);
     } finally {
         isExporting = false;
-        if (progressDiv.parentNode) {
-            progressDiv.parentNode.removeChild(progressDiv);
-        }
+        hideProgressUI();
     }
 }
 
@@ -204,7 +202,7 @@ async function exportCanvasToMP4({ canvas, durationSec = 5, quality = 'high', on
  * @param {number} [options.fps=30] - Frame rate
  * @param {string} [options.quality='high'] - Quality setting
  */
-async function startLiveRecording({ canvas, fps = 30, quality = 'high' }) {
+async function startLiveRecording({ canvas, fps = 60, quality = 'ultra' }) {
     if (!canvas) {
         throw new Error('Canvas element is required');
     }
@@ -239,14 +237,15 @@ async function startLiveRecording({ canvas, fps = 30, quality = 'high' }) {
             throw new Error('No supported video MIME types found');
         }
 
-        // Quality settings
+        // Quality settings (increased for better quality)
         const qualitySettings = {
-            low: 1000000,
-            medium: 4000000,
-            high: 8000000
+            low: 2000000,    // 2 Mbps
+            medium: 8000000, // 8 Mbps
+            high: 16000000,  // 16 Mbps
+            ultra: 32000000  // 32 Mbps
         };
 
-        const bitrate = qualitySettings[quality] || qualitySettings.high;
+        const bitrate = qualitySettings[quality] || qualitySettings.ultra;
 
         // Create MediaRecorder
         const recorder = new MediaRecorder(stream, {
@@ -325,41 +324,33 @@ async function stopLiveRecording() {
 }
 
 /**
- * Create progress UI element
+ * Show progress UI
  */
-function createProgressUI() {
-    const progressDiv = document.createElement('div');
-    progressDiv.style.cssText = `
-        position: fixed;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        background: rgba(0,0,0,0.9);
-        color: white;
-        padding: 30px;
-        border-radius: 15px;
-        z-index: 1000;
-        text-align: center;
-        font-family: 'Inter', sans-serif;
-        min-width: 300px;
-    `;
-    progressDiv.innerHTML = `
-        <div style="font-size: 18px; margin-bottom: 15px;">Exporting Video...</div>
-        <div id="progressText" style="font-size: 14px; margin-bottom: 10px;">0%</div>
-        <div id="progressBar" style="width: 250px; height: 12px; background: #333; margin: 0 auto; border-radius: 6px; overflow: hidden;">
-            <div id="progressFill" style="width: 0%; height: 100%; background: linear-gradient(90deg, #007AFF, #00D4FF); border-radius: 6px; transition: width 0.3s ease;"></div>
-        </div>
-       
-    `;
-    return progressDiv;
+function showProgressUI() {
+    const progressElement = document.getElementById('exportProgress');
+    if (progressElement) {
+        progressElement.classList.remove('hidden');
+        // Reset progress
+        updateProgress(0);
+    }
+}
+
+/**
+ * Hide progress UI
+ */
+function hideProgressUI() {
+    const progressElement = document.getElementById('exportProgress');
+    if (progressElement) {
+        progressElement.classList.add('hidden');
+    }
 }
 
 /**
  * Update progress UI
  */
-function updateProgress(progressDiv, progress) {
-    const progressText = progressDiv.querySelector('#progressText');
-    const progressFill = progressDiv.querySelector('#progressFill');
+function updateProgress(progress) {
+    const progressText = document.getElementById('progressText');
+    const progressFill = document.getElementById('progressFill');
 
     if (progressText) {
         progressText.textContent = `${Math.round(progress * 100)}%`;
@@ -373,54 +364,34 @@ function updateProgress(progressDiv, progress) {
  * Show success message
  */
 function showSuccess(message) {
-    const toast = document.createElement('div');
-    toast.style.cssText = `
-        position: fixed;
-        top: 20px;
-        right: 20px;
-        background: #4CAF50;
-        color: white;
-        padding: 15px 20px;
-        border-radius: 8px;
-        z-index: 1000;
-        font-family: 'Inter', sans-serif;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-    `;
-    toast.textContent = message;
-    document.body.appendChild(toast);
+    const successToast = document.getElementById('successToast');
+    const successMessage = document.getElementById('successMessage');
 
-    setTimeout(() => {
-        if (toast.parentNode) {
-            toast.parentNode.removeChild(toast);
-        }
-    }, 3000);
+    if (successToast && successMessage) {
+        successMessage.textContent = message;
+        successToast.classList.remove('hidden');
+
+        setTimeout(() => {
+            successToast.classList.add('hidden');
+        }, 3000);
+    }
 }
 
 /**
  * Show error message
  */
 function showError(message) {
-    const toast = document.createElement('div');
-    toast.style.cssText = `
-        position: fixed;
-        top: 20px;
-        right: 20px;
-        background: #f44336;
-        color: white;
-        padding: 15px 20px;
-        border-radius: 8px;
-        z-index: 1000;
-        font-family: 'Inter', sans-serif;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-    `;
-    toast.textContent = message;
-    document.body.appendChild(toast);
+    const errorToast = document.getElementById('errorToast');
+    const errorMessage = document.getElementById('errorMessage');
 
-    setTimeout(() => {
-        if (toast.parentNode) {
-            toast.parentNode.removeChild(toast);
-        }
-    }, 5000);
+    if (errorToast && errorMessage) {
+        errorMessage.textContent = message;
+        errorToast.classList.remove('hidden');
+
+        setTimeout(() => {
+            errorToast.classList.add('hidden');
+        }, 5000);
+    }
 }
 
 /**

@@ -70,8 +70,7 @@
         <button id="playPauseBtn">Pause/Play</button>
         <button id="exportSVGBtn">Export SVG</button>
         <button id="exportPNGBtn">Export PNG</button>
-        <button id="exportVideoBtn">Export Video</button>
-        <button id="recordLiveBtn">Record Live</button>
+        <button id="exportVideoBtn">Export Video (15s @ 60fps)</button>
 
         <div class="checkbox-container">
             <input type="checkbox" id="alignmentCheckbox">
@@ -133,6 +132,26 @@
     <script src="rendering/text-renderer.js"></script>
     <script src="rendering/background-renderer.js"></script>
     <script src="rendering/render-pipeline.js"></script>
+    <!-- Video Export Progress UI -->
+    <div id="exportProgress" class="export-progress hidden">
+        <div class="progress-content">
+            <h3>Exporting Video...</h3>
+            <div class="progress-bar">
+                <div id="progressFill" class="progress-fill"></div>
+            </div>
+            <div id="progressText" class="progress-text">0%</div>
+        </div>
+    </div>
+
+    <!-- Toast Notifications -->
+    <div id="successToast" class="toast toast-success hidden">
+        <span id="successMessage"></span>
+    </div>
+
+    <div id="errorToast" class="toast toast-error hidden">
+        <span id="errorMessage"></span>
+    </div>
+
     <script src="core/animation-engine.js"></script>
     <script src="ui-controller.js"></script>
     <script src="export-manager.js"></script>
