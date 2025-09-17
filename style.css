@@ -195,6 +195,12 @@ button:hover {
     box-sizing: border-box;
 }
 
+#textInput ::placeholder {
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    color: #666;
+}
+
 #textInput:focus {
     outline: none;
     border-color: #007AFF;

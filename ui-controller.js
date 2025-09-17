@@ -1,9 +1,9 @@
 // UI Controller - Handles all UI interactions and state management
 
 // UI elements
-let phaseSlider, ampSlider, verticalOffsetSlider, marginSlider;
+let phaseSlider, ampSlider, verticalOffsetSlider, marginSlider, falloffSlider;
 let playPauseBtn, alignmentCheckbox, shaderModeCheckbox, textInput, fontUploadBtn, fontFile, fontSelect, exportSVGBtn;
-let phaseValue, ampValue, verticalOffsetValue, marginValue;
+let phaseValue, ampValue, verticalOffsetValue, marginValue, falloffValue;
 let typingInfo;
 
 // Color picker elements
@@ -33,6 +33,7 @@ function initUI(initialWords, initialUserHasTyped, initialWdt) {
     ampSlider = document.getElementById('ampSlider');
     verticalOffsetSlider = document.getElementById('verticalOffsetSlider');
     marginSlider = document.getElementById('marginSlider');
+    falloffSlider = document.getElementById('falloffSlider');
     playPauseBtn = document.getElementById('playPauseBtn');
     alignmentCheckbox = document.getElementById('alignmentCheckbox');
     shaderModeCheckbox = document.getElementById('shaderModeCheckbox');
@@ -47,6 +48,7 @@ function initUI(initialWords, initialUserHasTyped, initialWdt) {
     ampValue = document.getElementById('ampValue');
     verticalOffsetValue = document.getElementById('verticalOffsetValue');
     marginValue = document.getElementById('marginValue');
+    falloffValue = document.getElementById('falloffValue');
 
     // Get typing info element
     typingInfo = document.querySelector('.typing-info');
@@ -89,6 +91,11 @@ function setupEventListeners() {
     marginSlider.addEventListener('input', () => {
         updateSliderValues();
     });
+
+    falloffSlider.addEventListener('input', () => {
+        updateSliderValues();
+    });
+
 
     // Button events
     playPauseBtn.addEventListener('click', () => {
@@ -261,6 +268,7 @@ function updateSliderValues() {
     ampValue.textContent = Math.round(getAmplitudeValue());
     verticalOffsetValue.textContent = getVerticalOffsetValue().toFixed(2);
     marginValue.textContent = Math.round(getMarginValue());
+    falloffValue.textContent = getFalloffValue().toFixed(1);
 }
 
 // Handle text input changes
@@ -354,6 +362,12 @@ function getSpeedValue() {
 function getFactorValue() {
     return 1.4;
 }
+
+// Get falloff value
+function getFalloffValue() {
+    return parseFloat(falloffSlider.value);
+}
+
 
 // Get color 1 value
 function getColor1Value() {
@@ -461,6 +475,7 @@ window.UIController = {
     getAmplitudeValue,
     getVerticalOffsetValue,
     getMarginValue,
+    getFalloffValue,
     getBackgroundColor,
     getFillColor,
     getSpeedValue,

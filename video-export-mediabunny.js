@@ -379,7 +379,7 @@ function createProgressUI() {
         <div id="progressBar" style="width: 250px; height: 12px; background: #333; margin: 0 auto; border-radius: 6px; overflow: hidden;">
             <div id="progressFill" style="width: 0%; height: 100%; background: linear-gradient(90deg, #007AFF, #00D4FF); border-radius: 6px; transition: width 0.3s ease;"></div>
         </div>
-        <div style="font-size: 12px; margin-top: 10px; opacity: 0.7;">Using Mediabunny</div>
+       
     `;
     return progressDiv;
 }
