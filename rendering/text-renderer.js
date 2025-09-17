@@ -6,6 +6,7 @@ class TextRenderer {
         this.internalHorizontalMargin = 120;
         this.internalVerticalMargin = 120;
         this.internalLineHeightMultiplier = 1.25;
+        this.isPlaceholder = false;
     }
 
     // Set alignment mode
@@ -16,6 +17,16 @@ class TextRenderer {
     // Get alignment mode
     getAlignment() {
         return this.isLeftAligned;
+    }
+
+    // Set placeholder state
+    setPlaceholderState(isPlaceholder) {
+        this.isPlaceholder = isPlaceholder;
+    }
+
+    // Get placeholder state
+    getPlaceholderState() {
+        return this.isPlaceholder;
     }
 
     // Set internal margins
@@ -84,11 +95,31 @@ class TextRenderer {
 
     // Render a single character
     renderCharacter(ctx, character, x, y, fontSize, userHasTyped, fillColor) {
+        // Determine color based on placeholder state and user input
+        let textColor;
+        if (this.isPlaceholder) {
+            // Placeholder text - light grey with reduced opacity
+            textColor = '#c0c0c0';
+        } else if (userHasTyped) {
+            // Actual user content
+            textColor = fillColor;
+        } else {
+            // Default state (shouldn't happen with new logic, but keeping as fallback)
+            textColor = '#e6e6e6';
+        }
+
         if (FontManager.hasFont()) {
             // Use OpenType.js for custom fonts
             const font = FontManager.getFont();
             const path = font.getPath(character.toUpperCase(), x, y, fontSize);
-            ctx.fillStyle = userHasTyped ? fillColor : '#e6e6e6';
+
+            // Apply reduced opacity for placeholder
+            if (this.isPlaceholder) {
+                ctx.save();
+                ctx.globalAlpha = 0.4; // Reduced opacity for placeholder
+            }
+
+            ctx.fillStyle = textColor;
             ctx.beginPath();
             path.commands.forEach(cmd => {
                 switch (cmd.type) {
@@ -100,13 +131,28 @@ class TextRenderer {
                 }
             });
             ctx.fill();
+
+            if (this.isPlaceholder) {
+                ctx.restore(); // Restore normal opacity
+            }
         } else {
             // Use basic text rendering
             ctx.textAlign = this.isLeftAligned ? 'left' : 'center';
             ctx.textBaseline = 'alphabetic';
-            ctx.fillStyle = userHasTyped ? fillColor : '#e6e6e6';
+
+            // Apply reduced opacity for placeholder
+            if (this.isPlaceholder) {
+                ctx.save();
+                ctx.globalAlpha = 0.4; // Reduced opacity for placeholder
+            }
+
+            ctx.fillStyle = textColor;
             ctx.font = `${fontSize}px Inter, sans-serif`;
             ctx.fillText(character.toUpperCase(), x, y);
+
+            if (this.isPlaceholder) {
+                ctx.restore(); // Restore normal opacity
+            }
         }
     }
 

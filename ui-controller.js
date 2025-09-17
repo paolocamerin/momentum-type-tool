@@ -63,8 +63,8 @@ function initUI(initialWords, initialUserHasTyped, initialWdt) {
     colorValue3Picker = document.getElementById('colorValue3Picker');
     colorValue4Picker = document.getElementById('colorValue4Picker');
 
-    // Initialize text input with default text
-    textInput.value = words;
+    // Don't set initial value - let HTML placeholder show
+    textInput.value = '';
 
     // Initialize alignment state from checkbox
     window.RenderPipeline.setTextAlignment(alignmentCheckbox.checked);
@@ -126,6 +126,11 @@ function setupEventListeners() {
 
     // Text input events
     textInput.addEventListener('input', handleTextInput);
+    textInput.addEventListener('focus', handleTextFocus);
+    textInput.addEventListener('blur', handleTextBlur);
+
+    // Initialize placeholder state
+    handleTextInput(); // Set initial state
 
     // Focus text input for immediate use
     textInput.focus();
@@ -274,24 +279,103 @@ function updateSliderValues() {
 // Handle text input changes
 function handleTextInput() {
     const inputText = textInput.value;
+    const hasActualContent = inputText.trim() !== '';
 
-    if (inputText.trim() === '') {
-        words = "Start typing your title";
+    if (hasActualContent) {
+        // User has typed actual content
+        words = inputText;
+        userHasTyped = true;
+        if (typingInfo) {
+            typingInfo.classList.add('fade-out');
+        }
+
+        // Enable export buttons
+        enableExportButtons(true);
+        hideExportHint();
+    } else {
+        // No actual content - show placeholder
+        words = "Start typing your title"; // This will be rendered with low opacity
         userHasTyped = false;
         if (typingInfo) {
             typingInfo.classList.remove('fade-out');
         }
-    } else {
-        words = inputText;
-        if (!userHasTyped) {
-            userHasTyped = true;
-            if (typingInfo) {
-                typingInfo.classList.add('fade-out');
-            }
-        }
+
+        // Disable export buttons and show hint
+        enableExportButtons(false);
+        showExportHint();
     }
 
-    // Text changes are handled by the animation loop
+    // Pass both text and placeholder flag to render pipeline
+    window.RenderPipeline.setText(words, !hasActualContent);
+}
+
+// Handle text input focus - clear placeholder behavior
+function handleTextFocus() {
+    // The HTML placeholder will be handled by the browser
+    // We just need to ensure our state is correct
+    if (textInput.value.trim() === '') {
+        // If there's no actual content, we're still in placeholder mode
+        // The browser will hide the HTML placeholder automatically
+    }
+}
+
+// Handle text input blur - restore placeholder if empty
+function handleTextBlur() {
+    // Trigger input handler to check if we need to show placeholder
+    handleTextInput();
+}
+
+// Enable/disable export buttons based on content
+function enableExportButtons(enabled) {
+    const exportSVGBtn = document.getElementById('exportSVGBtn');
+    const exportPNGBtn = document.getElementById('exportPNGBtn');
+    const exportVideoBtn = document.getElementById('exportVideoBtn');
+    const recordLiveBtn = document.getElementById('recordLiveBtn');
+
+    const buttons = [exportSVGBtn, exportPNGBtn, exportVideoBtn, recordLiveBtn].filter(btn => btn);
+
+    buttons.forEach(btn => {
+        btn.disabled = !enabled;
+        btn.style.opacity = enabled ? '1' : '0.5';
+        btn.style.cursor = enabled ? 'pointer' : 'not-allowed';
+    });
+}
+
+// Show export hint message
+function showExportHint() {
+    let hintElement = document.getElementById('exportHint');
+    if (!hintElement) {
+        // Create hint element if it doesn't exist
+        hintElement = document.createElement('div');
+        hintElement.id = 'exportHint';
+        hintElement.textContent = 'Type something to enable export';
+        hintElement.style.cssText = `
+            color: #666;
+            font-size: 12px;
+            text-align: center;
+            margin: 10px 0;
+            font-style: italic;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        `;
+
+        // Insert after the export buttons
+        const exportContainer = document.querySelector('.export-buttons') || document.body;
+        exportContainer.appendChild(hintElement);
+    }
+
+    // Fade in the hint
+    setTimeout(() => {
+        hintElement.style.opacity = '1';
+    }, 100);
+}
+
+// Hide export hint message
+function hideExportHint() {
+    const hintElement = document.getElementById('exportHint');
+    if (hintElement) {
+        hintElement.style.opacity = '0';
+    }
 }
 
 // Canvas width management (handled by main.js)

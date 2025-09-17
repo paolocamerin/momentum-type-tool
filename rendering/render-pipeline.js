@@ -42,6 +42,25 @@ class RenderPipeline {
         return this.backgroundRenderer.getShaderMode();
     }
 
+    // Set text content and placeholder state
+    setText(text, isPlaceholder = false) {
+        this.currentText = text;
+        this.isPlaceholder = isPlaceholder;
+        if (this.textRenderer) {
+            this.textRenderer.setPlaceholderState(isPlaceholder);
+        }
+    }
+
+    // Get current text
+    getText() {
+        return this.currentText || '';
+    }
+
+    // Check if current text is placeholder
+    getIsPlaceholder() {
+        return this.isPlaceholder || false;
+    }
+
     // Set text alignment
     setTextAlignment(isLeftAligned) {
         this.textRenderer.setAlignment(isLeftAligned);
