@@ -16,9 +16,13 @@ function exportToSVG() {
 
     const svgNS = 'http://www.w3.org/2000/svg';
     const svg = document.createElementNS(svgNS, 'svg');
-    svg.setAttribute('width', window.innerWidth);
-    svg.setAttribute('height', (window.innerWidth / 16) * 9);
-    svg.setAttribute('viewBox', `0 0 ${window.innerWidth} ${(window.innerWidth / 16) * 9}`);
+
+    // Fixed export dimensions (1920x1080)
+    const exportWidth = 1920;
+    const exportHeight = 1080;
+    svg.setAttribute('width', exportWidth);
+    svg.setAttribute('height', exportHeight);
+    svg.setAttribute('viewBox', `0 0 ${exportWidth} ${exportHeight}`);
 
     // Add background rectangle
     const backgroundRect = document.createElementNS(svgNS, 'rect');
@@ -68,18 +72,34 @@ function exportToSVG() {
     const rows = window.TextRenderer.preProcess(state.words);
     const isLeftAligned = state.isLeftAligned;
 
-    let rowPosition = margin;
-    const lineHeight = ((window.innerWidth / 16) * 9) / 10;
+    // Use fixed export dimensions for calculations
+    const canvasWidth = exportWidth;
+    const canvasHeight = exportHeight;
+
+    let rowPosition = 0;
+    const lineHeightMultiplier = 1.25; // Match text renderer
 
     for (let rowIndex = 0; rowIndex < rows.length; rowIndex++) {
         const row = rows[rowIndex];
 
-        // Calculate font size for the row
+        // Calculate font size for the row using fixed dimensions
         let fontSize;
         if (row.length > 20) {
-            fontSize = ((window.innerWidth / 16) * 9) / map(row.length, 20, 60, 15, 40);
+            fontSize = canvasHeight / map(row.length, 20, 60, 15, 40);
         } else {
-            fontSize = ((window.innerWidth / 16) * 9) / 15;
+            fontSize = canvasHeight / 15;
+        }
+
+        // Calculate row position using font metrics (matching text renderer)
+        if (rowIndex === 0) {
+            // Get font metrics for first row
+            const glyph = font.charToGlyph('M');
+            const ascent = (font.ascender || 0.8 * font.unitsPerEm) * (fontSize / font.unitsPerEm);
+            rowPosition = margin + ascent;
+        } else {
+            // Add line height for subsequent rows
+            const prevFontSize = rowIndex === 1 ? fontSize : canvasHeight / 15; // Approximate previous font size
+            rowPosition += Math.max(prevFontSize * lineHeightMultiplier, 10);
         }
 
         if (isLeftAligned) {
@@ -92,7 +112,8 @@ function exportToSVG() {
                 const glyph = font.charToGlyph(character.toUpperCase());
                 const currentCharWidth = glyph.advanceWidth * (fontSize / font.unitsPerEm);
 
-                const finalX = charIndex == 0 ? margin : x + ((Math.sin(phase + additionalPhase) * .5 + .5) * ampl) * oscillationOffset * 1 / row.length * charIndex;
+                const angle = phase + additionalPhase + (rowIndex + 1) * rowOffset;
+                const finalX = charIndex == 0 ? margin : x + ((Math.sin(angle) * .5 + .5) * ampl * 0.1) * oscillationOffset * 1 / row.length * charIndex;
 
                 // Create SVG path element
                 const path = font.getPath(character.toUpperCase(), finalX, rowPosition, fontSize);
@@ -136,7 +157,26 @@ function exportToSVG() {
                 }
                 const horizontalOffset = baseSineValue * centerAlignmentIntensity;
 
-                const x = (state.wdt / (row.length - 1)) * charIndex + horizontalOffset + margin;
+                // Calculate row width for center alignment using fixed dimensions
+                const rowWidths = [];
+                let rowTotalWidth = 0;
+                for (let i = 0; i < row.length; i++) {
+                    const glyph = font.charToGlyph(row[i].toUpperCase());
+                    const width = glyph.advanceWidth * (fontSize / font.unitsPerEm);
+                    rowWidths.push(width);
+                    rowTotalWidth += width;
+                }
+
+                const gaps = Math.max(row.length - 1, 1);
+                const extraSpace = Math.max(canvasWidth - margin * 2 - rowTotalWidth, 0);
+                const gapIncrement = extraSpace / gaps;
+
+                let cumulativeX = margin;
+                for (let i = 0; i < charIndex; i++) {
+                    cumulativeX += rowWidths[i] + (i < row.length - 1 ? gapIncrement : 0);
+                }
+
+                const x = cumulativeX + horizontalOffset;
 
                 // Create SVG path element
                 const path = font.getPath(character.toUpperCase(), x, rowPosition, fontSize);
@@ -159,8 +199,6 @@ function exportToSVG() {
                 group.appendChild(svgPath);
             }
         }
-
-        rowPosition += lineHeight;
     }
 
     // Create and download the SVG file
@@ -185,49 +223,32 @@ function exportToPNG() {
         return;
     }
 
-    // Create a temporary canvas for high-resolution export
+    // Create a temporary canvas for fixed 1920x1080 export
     const tempCanvas = document.createElement('canvas');
     const tempCtx = tempCanvas.getContext('2d');
 
-    // Set high resolution (2x for better quality)
-    const scale = 2;
-    tempCanvas.width = canvas.width * scale;
-    tempCanvas.height = canvas.height * scale;
-
-    // Scale the context
-    tempCtx.scale(scale, scale);
+    // Set fixed export dimensions (1920x1080)
+    const exportWidth = 1920;
+    const exportHeight = 1080;
+    tempCanvas.width = exportWidth;
+    tempCanvas.height = exportHeight;
 
     // Get current state
     const state = UIController.getCurrentState();
     const backgroundColor = UIController.getBackgroundColor();
     const fillColor = UIController.getFillColor();
 
-    // Check if shader mode is enabled
-    const isShaderMode = window.RenderPipeline.getShaderMode();
+    // Render at export resolution using RenderPipeline
+    const animationTime = window.AnimationEngine.getAnimationTime();
 
-    if (isShaderMode) {
-        // For shader mode, we need to capture the shader canvas
-        const shaderCanvas = document.getElementById('shader-canvas');
-        if (shaderCanvas) {
-            // Ensure shader is rendered with current state
-            const animationTime = window.AnimationEngine.getAnimationTime();
-            window.ShaderManager.render(animationTime);
+    console.log('[PNG Export] Starting export with dimensions:', exportWidth, 'x', exportHeight);
+    console.log('[PNG Export] Background color:', backgroundColor);
+    console.log('[PNG Export] Shader mode:', window.RenderPipeline.getShaderMode());
 
-            // Draw shader background
-            tempCtx.drawImage(shaderCanvas, 0, 0, canvas.width, canvas.height);
-        } else {
-            // Fallback to solid color
-            tempCtx.fillStyle = backgroundColor;
-            tempCtx.fillRect(0, 0, canvas.width, canvas.height);
-        }
-    } else {
-        // Draw solid background
-        tempCtx.fillStyle = backgroundColor;
-        tempCtx.fillRect(0, 0, canvas.width, canvas.height);
-    }
+    // Use RenderPipeline to render directly to the export canvas at 1920x1080
+    window.RenderPipeline.renderForExport(tempCtx, exportWidth, exportHeight, animationTime);
 
-    // Draw the text on top
-    tempCtx.drawImage(canvas, 0, 0);
+    console.log('[PNG Export] Render complete, creating blob...');
 
     // Convert to PNG and download
     tempCanvas.toBlob((blob) => {

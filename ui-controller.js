@@ -1,9 +1,9 @@
 // UI Controller - Handles all UI interactions and state management
 
 // UI elements
-let phaseSlider, ampSlider, verticalOffsetSlider, marginSlider;
+let phaseSlider, ampSlider, verticalOffsetSlider, marginSlider, falloffSlider;
 let playPauseBtn, alignmentCheckbox, shaderModeCheckbox, textInput, fontUploadBtn, fontFile, fontSelect, exportSVGBtn;
-let phaseValue, ampValue, verticalOffsetValue, marginValue;
+let phaseValue, ampValue, verticalOffsetValue, marginValue, falloffValue;
 let typingInfo;
 
 // Color picker elements
@@ -17,6 +17,12 @@ let color1 = '#6C2EA9';
 let color2 = '#1F123C';
 let color3 = '#250844';
 let color4 = '#495C91';
+
+// Text history variables
+let textHistory = [];
+let saveTextTimeout = null;
+const TEXT_SAVE_DELAY = 2000; // 2 seconds delay
+const MAX_HISTORY_ITEMS = 20;
 
 // State variables (managed by main.js)
 // These are initialized by main.js and passed to initUI()
@@ -33,6 +39,7 @@ function initUI(initialWords, initialUserHasTyped, initialWdt) {
     ampSlider = document.getElementById('ampSlider');
     verticalOffsetSlider = document.getElementById('verticalOffsetSlider');
     marginSlider = document.getElementById('marginSlider');
+    falloffSlider = document.getElementById('falloffSlider');
     playPauseBtn = document.getElementById('playPauseBtn');
     alignmentCheckbox = document.getElementById('alignmentCheckbox');
     shaderModeCheckbox = document.getElementById('shaderModeCheckbox');
@@ -47,6 +54,7 @@ function initUI(initialWords, initialUserHasTyped, initialWdt) {
     ampValue = document.getElementById('ampValue');
     verticalOffsetValue = document.getElementById('verticalOffsetValue');
     marginValue = document.getElementById('marginValue');
+    falloffValue = document.getElementById('falloffValue');
 
     // Get typing info element
     typingInfo = document.querySelector('.typing-info');
@@ -61,14 +69,17 @@ function initUI(initialWords, initialUserHasTyped, initialWdt) {
     colorValue3Picker = document.getElementById('colorValue3Picker');
     colorValue4Picker = document.getElementById('colorValue4Picker');
 
-    // Initialize text input with default text
-    textInput.value = words;
+    // Don't set initial value - let HTML placeholder show
+    textInput.value = '';
 
     // Initialize alignment state from checkbox
     window.RenderPipeline.setTextAlignment(alignmentCheckbox.checked);
 
     // Initialize color pickers
     initColorPickers();
+
+    // Set initial state of gradient color pickers based on shader mode
+    toggleGradientColorPickers(shaderModeCheckbox.checked);
 }
 
 // Setup all event listeners
@@ -90,6 +101,11 @@ function setupEventListeners() {
         updateSliderValues();
     });
 
+    falloffSlider.addEventListener('input', () => {
+        updateSliderValues();
+    });
+
+
     // Button events
     playPauseBtn.addEventListener('click', () => {
         window.AnimationEngine.togglePlayback();
@@ -97,10 +113,19 @@ function setupEventListeners() {
 
     alignmentCheckbox.addEventListener('change', () => {
         window.RenderPipeline.setTextAlignment(alignmentCheckbox.checked);
+        // Trigger re-render if paused
+        triggerRenderIfPaused();
     });
 
     shaderModeCheckbox.addEventListener('change', () => {
-        window.RenderPipeline.setShaderMode(shaderModeCheckbox.checked);
+        const isShaderMode = shaderModeCheckbox.checked;
+        window.RenderPipeline.setShaderMode(isShaderMode);
+
+        // Enable/disable gradient color pickers based on shader mode
+        toggleGradientColorPickers(isShaderMode);
+
+        // Trigger re-render if paused
+        triggerRenderIfPaused();
     });
 
     fontUploadBtn.addEventListener('click', () => fontFile.click());
@@ -115,10 +140,21 @@ function setupEventListeners() {
     exportSVGBtn.addEventListener('click', ExportManager.exportToSVG);
     document.getElementById('exportPNGBtn').addEventListener('click', ExportManager.exportToPNG);
     document.getElementById('exportVideoBtn').addEventListener('click', handleVideoExport);
-    document.getElementById('recordLiveBtn').addEventListener('click', handleLiveRecording);
 
     // Text input events
     textInput.addEventListener('input', handleTextInput);
+    textInput.addEventListener('focus', handleTextFocus);
+    textInput.addEventListener('blur', handleTextBlur);
+
+    // Text history events
+    document.getElementById('historyBtn').addEventListener('click', toggleHistoryDropdown);
+    document.getElementById('clearHistoryBtn').addEventListener('click', clearTextHistory);
+
+    // Close history dropdown when clicking outside
+    document.addEventListener('click', handleDocumentClick);
+
+    // Initialize placeholder state
+    handleTextInput(); // Set initial state
 
     // Focus text input for immediate use
     textInput.focus();
@@ -132,12 +168,16 @@ function initColorPickers() {
     // Initialize background color picker
     bgPickr = Pickr.create({
         el: '#bgColorPicker',
-        theme: 'classic',
+        theme: 'nano',
         default: backgroundColor,
         components: {
             preview: true,
             hue: true,
-            interaction: { input: true }
+            interaction: {
+                input: true,
+                clear: true,
+                save: true
+            }
         }
     });
 
@@ -147,12 +187,16 @@ function initColorPickers() {
     // Initialize text color picker
     textPickr = Pickr.create({
         el: '#textColorPicker',
-        theme: 'classic',
+        theme: 'nano',
         default: textColor,
         components: {
             preview: true,
             hue: true,
-            interaction: { input: true }
+            interaction: {
+                input: true,
+                clear: true,
+                save: true
+            }
         }
     });
 
@@ -160,24 +204,32 @@ function initColorPickers() {
 
     colorValue1Picker = Pickr.create({
         el: '#colorValue1Picker',
-        theme: 'classic',
+        theme: 'nano',
         default: color1,
         components: {
             preview: true,
             hue: true,
-            interaction: { input: true }
+            interaction: {
+                input: true,
+                clear: true,
+                save: true
+            }
         }
     });
     // Initialize color 2 picker
 
     colorValue2Picker = Pickr.create({
         el: '#colorValue2Picker',
-        theme: 'classic',
+        theme: 'nano',
         default: color2,
         components: {
             preview: true,
             hue: true,
-            interaction: { input: true }
+            interaction: {
+                input: true,
+                clear: true,
+                save: true
+            }
         }
     });
 
@@ -185,12 +237,16 @@ function initColorPickers() {
 
     colorValue3Picker = Pickr.create({
         el: '#colorValue3Picker',
-        theme: 'classic',
+        theme: 'nano',
         default: color3,
         components: {
             preview: true,
             hue: true,
-            interaction: { input: true }
+            interaction: {
+                input: true,
+                clear: true,
+                save: true
+            }
         }
     });
 
@@ -198,12 +254,16 @@ function initColorPickers() {
 
     colorValue4Picker = Pickr.create({
         el: '#colorValue4Picker',
-        theme: 'classic',
+        theme: 'nano',
         default: color4,
         components: {
             preview: true,
             hue: true,
-            interaction: { input: true }
+            interaction: {
+                input: true,
+                clear: true,
+                save: true
+            }
         }
     });
 
@@ -216,28 +276,129 @@ function initColorPickers() {
     colorValue4Picker.setColor(color4);
     // Add event listeners
     bgPickr.on('change', (color) => {
-        backgroundColor = color.toHEXA().toString();
+        try {
+            backgroundColor = color.toHEXA().toString();
+            bgPickr.setColor(backgroundColor);
+            console.log('Background color changed to:', backgroundColor);
+            // Trigger re-render if paused
+            triggerRenderIfPaused();
+        } catch (error) {
+            console.error('Error setting background color:', error);
+        }
     });
 
     textPickr.on('change', (color) => {
-        textColor = color.toHEXA().toString();
+        try {
+            textColor = color.toHEXA().toString();
+            textPickr.setColor(textColor);
+            console.log('Text color changed to:', textColor);
+            // Trigger re-render if paused
+            triggerRenderIfPaused();
+        } catch (error) {
+            console.error('Error setting text color:', error);
+        }
     });
 
     colorValue1Picker.on('change', (color) => {
-        color1 = color.toHEXA().toString();
+        try {
+            color1 = color.toHEXA().toString();
+            colorValue1Picker.setColor(color1);
+            console.log('Color1 changed to:', color1);
+            // Trigger re-render if paused
+            triggerRenderIfPaused();
+        } catch (error) {
+            console.error('Error setting color1:', error);
+        }
     });
 
     colorValue2Picker.on('change', (color) => {
-        color2 = color.toHEXA().toString();
+        try {
+            color2 = color.toHEXA().toString();
+            colorValue2Picker.setColor(color2);
+            console.log('Color2 changed to:', color2);
+            // Trigger re-render if paused
+            triggerRenderIfPaused();
+        } catch (error) {
+            console.error('Error setting color2:', error);
+        }
     });
 
     colorValue3Picker.on('change', (color) => {
-        color3 = color.toHEXA().toString();
+        try {
+            color3 = color.toHEXA().toString();
+            colorValue3Picker.setColor(color3);
+            console.log('Color3 changed to:', color3);
+            // Trigger re-render if paused
+            triggerRenderIfPaused();
+        } catch (error) {
+            console.error('Error setting color3:', error);
+        }
     });
 
     colorValue4Picker.on('change', (color) => {
-        color4 = color.toHEXA().toString();
+        try {
+            color4 = color.toHEXA().toString();
+            colorValue4Picker.setColor(color4);
+            console.log('Color4 changed to:', color4);
+            // Trigger re-render if paused
+            triggerRenderIfPaused();
+        } catch (error) {
+            console.error('Error setting color4:', error);
+        }
     });
+}
+
+// Toggle gradient color pickers and falloff slider based on shader mode
+function toggleGradientColorPickers(enabled) {
+    const gradientSwatches = document.querySelector('.gradient-swatches');
+    const falloffSlider = document.getElementById('falloffSlider');
+    if (!gradientSwatches) return;
+
+    // Get all gradient color picker elements
+    const colorPickers = [
+        colorValue1Picker,
+        colorValue2Picker,
+        colorValue3Picker,
+        colorValue4Picker
+    ];
+
+    if (enabled) {
+        // Enable gradient color pickers
+        gradientSwatches.style.opacity = '1';
+        gradientSwatches.style.pointerEvents = 'auto';
+        gradientSwatches.classList.remove('disabled');
+
+        // Enable falloff slider
+        if (falloffSlider) {
+            falloffSlider.disabled = false;
+            falloffSlider.style.opacity = '1';
+        }
+
+        // Re-enable Pickr instances
+        colorPickers.forEach(picker => {
+            if (picker) {
+                picker.enable();
+            }
+        });
+    } else {
+        // Disable gradient color pickers
+        gradientSwatches.style.opacity = '0.3';
+        gradientSwatches.style.pointerEvents = 'none';
+        gradientSwatches.classList.add('disabled');
+
+        // Disable falloff slider
+        if (falloffSlider) {
+            falloffSlider.disabled = true;
+            falloffSlider.style.opacity = '0.3';
+        }
+
+        // Disable Pickr instances
+        colorPickers.forEach(picker => {
+            if (picker) {
+                picker.disable();
+            }
+        });
+    }
 }
 
 // Swap colors function
@@ -253,6 +414,9 @@ function swapColors() {
     colorValue2Picker.setColor(color2);
     colorValue3Picker.setColor(color3);
     colorValue4Picker.setColor(color4);
+
+    // Trigger re-render if paused
+    triggerRenderIfPaused();
 }
 
 // Update slider value displays
@@ -261,29 +425,123 @@ function updateSliderValues() {
     ampValue.textContent = Math.round(getAmplitudeValue());
     verticalOffsetValue.textContent = getVerticalOffsetValue().toFixed(2);
     marginValue.textContent = Math.round(getMarginValue());
+    falloffValue.textContent = getFalloffValue().toFixed(1);
+
+    // If animation is paused, trigger a single frame render to show changes
+    triggerRenderIfPaused();
 }
 
 // Handle text input changes
 function handleTextInput() {
     const inputText = textInput.value;
+    const hasActualContent = inputText.trim() !== '';
 
-    if (inputText.trim() === '') {
-        words = "Start typing your title";
+    if (hasActualContent) {
+        // User has typed actual content
+        words = inputText;
+        userHasTyped = true;
+        if (typingInfo) {
+            typingInfo.classList.add('fade-out');
+        }
+
+        // Enable export buttons
+        enableExportButtons(true);
+        hideExportHint();
+    } else {
+        // No actual content - show placeholder
+        words = "Start typing your title"; // This will be rendered with low opacity
         userHasTyped = false;
         if (typingInfo) {
             typingInfo.classList.remove('fade-out');
         }
-    } else {
-        words = inputText;
-        if (!userHasTyped) {
-            userHasTyped = true;
-            if (typingInfo) {
-                typingInfo.classList.add('fade-out');
-            }
-        }
+
+        // Disable export buttons and show hint
+        enableExportButtons(false);
+        showExportHint();
     }
 
-    // Text changes are handled by the animation loop
+    // Pass both text and placeholder flag to render pipeline
+    window.RenderPipeline.setText(words, !hasActualContent);
+
+    // Debounced text history saving
+    if (hasActualContent) {
+        // Clear previous timeout
+        if (saveTextTimeout) {
+            clearTimeout(saveTextTimeout);
+        }
+
+        // Set new timeout to save text after delay
+        saveTextTimeout = setTimeout(() => {
+            saveTextToHistory(inputText.trim());
+        }, TEXT_SAVE_DELAY);
+    }
+}
+
+// Handle text input focus - clear placeholder behavior
+function handleTextFocus() {
+    // The HTML placeholder will be handled by the browser
+    // We just need to ensure our state is correct
+    if (textInput.value.trim() === '') {
+        // If there's no actual content, we're still in placeholder mode
+        // The browser will hide the HTML placeholder automatically
+    }
+}
+
+// Handle text input blur - restore placeholder if empty
+function handleTextBlur() {
+    // Trigger input handler to check if we need to show placeholder
+    handleTextInput();
+}
+
+// Enable/disable export buttons based on content
+function enableExportButtons(enabled) {
+    const exportSVGBtn = document.getElementById('exportSVGBtn');
+    const exportPNGBtn = document.getElementById('exportPNGBtn');
+    const exportVideoBtn = document.getElementById('exportVideoBtn');
+    const buttons = [exportSVGBtn, exportPNGBtn, exportVideoBtn].filter(btn => btn);
+
+    buttons.forEach(btn => {
+        btn.disabled = !enabled;
+        btn.style.opacity = enabled ? '1' : '0.5';
+        btn.style.cursor = enabled ? 'pointer' : 'not-allowed';
+    });
+}
+
+// Show export hint message
+function showExportHint() {
+    let hintElement = document.getElementById('exportHint');
+    if (!hintElement) {
+        // Create hint element if it doesn't exist
+        hintElement = document.createElement('div');
+        hintElement.id = 'exportHint';
+        hintElement.textContent = 'Type something to enable export';
+        hintElement.style.cssText = `
+            color: #666;
+            font-size: 12px;
+            text-align: center;
+            margin: 10px 0;
+            font-style: italic;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        `;
+
+        // Insert after the export buttons
+        const exportContainer = document.querySelector('.export-buttons') || document.body;
+        exportContainer.appendChild(hintElement);
+    }
+
+    // Fade in the hint
+    setTimeout(() => {
+        hintElement.style.opacity = '1';
+    }, 100);
+}
+
+// Hide export hint message
+function hideExportHint() {
+    const hintElement = document.getElementById('exportHint');
+    if (hintElement) {
+        hintElement.style.opacity = '0';
+    }
 }
 
 // Canvas width management (handled by main.js)
@@ -302,7 +560,7 @@ function getVerticalOffsetValue() {
 }
 
 function getMarginValue() {
-    return 50 + parseFloat(marginSlider.value) * 350;
+    return 140 + parseFloat(marginSlider.value) * 350;
 }
 
 // Get current state for other modules
@@ -355,27 +613,49 @@ function getFactorValue() {
     return 1.4;
 }
 
+// Get falloff value
+function getFalloffValue() {
+    return parseFloat(falloffSlider.value);
+}
+
+
 // Get color 1 value
 function getColor1Value() {
     const color = hexToRgb(color1);
+    if (!color) {
+        console.warn('Invalid color1 hex value:', color1, 'using default');
+        return hexToRgb('#6C2EA9'); // Default purple
+    }
     return color;
 }
 
 // Get color 2 value
 function getColor2Value() {
     const color = hexToRgb(color2);
+    if (!color) {
+        console.warn('Invalid color2 hex value:', color2, 'using default');
+        return hexToRgb('#1F123C'); // Default dark purple
+    }
     return color;
 }
 
 // Get color 3 value
 function getColor3Value() {
     const color = hexToRgb(color3);
+    if (!color) {
+        console.warn('Invalid color3 hex value:', color3, 'using default');
+        return hexToRgb('#250844'); // Default dark purple
+    }
     return color;
 }
 
 // Get color 4 value
 function getColor4Value() {
     const color = hexToRgb(color4);
+    if (!color) {
+        console.warn('Invalid color4 hex value:', color4, 'using default');
+        return hexToRgb('#495C91'); // Default blue
+    }
     return color;
 }
 
@@ -396,8 +676,8 @@ async function handleVideoExport() {
     try {
         await window.VideoExport.exportCanvasToMP4({
             canvas: canvas,
-            durationSec: 5,
-            quality: 'high',
+            durationSec: 15,
+            quality: 'ultra',
             onProgress: (progress) => {
                 console.log(`Export progress: ${Math.round(progress * 100)}%`);
             }
@@ -408,48 +688,6 @@ async function handleVideoExport() {
     }
 }
 
-async function handleLiveRecording() {
-    const canvas = document.getElementById('canvas');
-    if (!canvas) {
-        alert('Canvas not found');
-        return;
-    }
-
-    // Wait for VideoExport to be available
-    if (!window.VideoExport || !window.VideoExport.startLiveRecording) {
-        alert('Video export module not loaded yet. Please try again in a moment.');
-        return;
-    }
-
-    const recordBtn = document.getElementById('recordLiveBtn');
-
-    if (!window.currentRecording) {
-        // Start recording
-        try {
-            window.currentRecording = await window.VideoExport.startLiveRecording({
-                canvas: canvas,
-                fps: 30,
-                quality: 'high'
-            });
-
-            recordBtn.textContent = 'Stop Recording';
-            console.log('Live recording started');
-        } catch (error) {
-            console.error('Start recording failed:', error);
-            alert(`Start recording failed: ${error.message}`);
-        }
-    } else {
-        // Stop recording
-        try {
-            await window.VideoExport.stopLiveRecording();
-            recordBtn.textContent = 'Record Live';
-            window.currentRecording = null;
-        } catch (error) {
-            console.error('Stop recording failed:', error);
-            alert(`Stop recording failed: ${error.message}`);
-        }
-    }
-}
 
 // Export UI controller functions
 window.UIController = {
@@ -461,6 +699,7 @@ window.UIController = {
     getAmplitudeValue,
     getVerticalOffsetValue,
     getMarginValue,
+    getFalloffValue,
     getBackgroundColor,
     getFillColor,
     getSpeedValue,
@@ -472,5 +711,144 @@ window.UIController = {
     getWords: () => words,
     getUserHasTyped: () => userHasTyped,
     getWdt: () => wdt,
-    setWdt: (value) => { wdt = value; }
+    setWdt: (value) => { wdt = value; },
+    triggerRenderIfPaused: triggerRenderIfPaused
 };
+
+// Utility function to trigger re-render when paused
+function triggerRenderIfPaused() {
+    if (window.AnimationEngine && !window.AnimationEngine.getIsPlaying()) {
+        window.AnimationEngine.renderSingleFrame();
+    }
+}
+
+// Text History Functions
+function loadTextHistory() {
+    try {
+        const stored = localStorage.getItem('textHistory');
+        if (stored) {
+            textHistory = JSON.parse(stored);
+        }
+    } catch (error) {
+        console.warn('Failed to load text history:', error);
+        textHistory = [];
+    }
+}
+
+function saveTextToHistory(text) {
+    // Don't save empty or very short texts
+    if (!text || text.length < 2) return;
+
+    // Don't save if it's the same as the last entry
+    if (textHistory.length > 0 && textHistory[0].text === text) return;
+
+    // Create history entry
+    const historyEntry = {
+        text: text,
+        timestamp: Date.now(),
+        date: new Date().toLocaleString()
+    };
+
+    // Remove any existing duplicate
+    textHistory = textHistory.filter(item => item.text !== text);
+
+    // Add to beginning of array
+    textHistory.unshift(historyEntry);
+
+    // Limit history size
+    if (textHistory.length > MAX_HISTORY_ITEMS) {
+        textHistory = textHistory.slice(0, MAX_HISTORY_ITEMS);
+    }
+
+    // Save to localStorage
+    try {
+        localStorage.setItem('textHistory', JSON.stringify(textHistory));
+    } catch (error) {
+        console.warn('Failed to save text history:', error);
+    }
+
+    // Update UI if dropdown is open
+    if (!document.getElementById('historyDropdown').classList.contains('hidden')) {
+        updateHistoryDropdown();
+    }
+}
+
+function toggleHistoryDropdown(event) {
+    event.stopPropagation();
+    const dropdown = document.getElementById('historyDropdown');
+
+    if (dropdown.classList.contains('hidden')) {
+        // Show dropdown
+        updateHistoryDropdown();
+        dropdown.classList.remove('hidden');
+    } else {
+        // Hide dropdown
+        dropdown.classList.add('hidden');
+    }
+}
+
+function updateHistoryDropdown() {
+    const historyList = document.getElementById('historyList');
+
+    if (textHistory.length === 0) {
+        historyList.innerHTML = '<div class="history-empty">No previous texts yet</div>';
+        return;
+    }
+
+    historyList.innerHTML = textHistory.map(item => `
+        <div class="history-item" data-text="${item.text.replace(/"/g, '&quot;')}">
+            <span class="history-item-text">${item.text}</span>
+            <span class="history-item-date">${item.date}</span>
+        </div>
+    `).join('');
+
+    // Add click listeners to history items
+    historyList.querySelectorAll('.history-item').forEach(item => {
+        item.addEventListener('click', () => {
+            const text = item.dataset.text;
+            selectHistoryText(text);
+        });
+    });
+}
+
+function selectHistoryText(text) {
+    // Set the text input value
+    textInput.value = text;
+
+    // Trigger input handler to update state
+    handleTextInput();
+
+    // Hide dropdown
+    document.getElementById('historyDropdown').classList.add('hidden');
+
+    // Focus text input
+    textInput.focus();
+}
+
+function clearTextHistory() {
+    textHistory = [];
+
+    try {
+        localStorage.removeItem('textHistory');
+    } catch (error) {
+        console.warn('Failed to clear text history:', error);
+    }
+
+    // Update UI
+    updateHistoryDropdown();
+}
+
+function handleDocumentClick(event) {
+    const dropdown = document.getElementById('historyDropdown');
+    const historyBtn = document.getElementById('historyBtn');
+
+    // If clicking outside dropdown and button, close dropdown
+    if (!dropdown.contains(event.target) && !historyBtn.contains(event.target)) {
+        dropdown.classList.add('hidden');
+    }
+}
+
+// Initialize text history on load
+document.addEventListener('DOMContentLoaded', () => {
+    loadTextHistory();
+});

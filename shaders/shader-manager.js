@@ -19,9 +19,10 @@ class ShaderManager {
     }
 
     // Initialize WebGL context and load shaders
-    async init(canvas) {
-        this.canvas = canvas;
-        this.gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+    async init() {
+        // Use display shader canvas for rendering (we'll switch contexts as needed)
+        this.canvas = window.CanvasManager.getShaderCanvas();
+        this.gl = window.CanvasManager.getShaderContext();
 
         if (!this.gl) {
             console.error('[ShaderManager] WebGL not supported');
@@ -41,31 +42,46 @@ class ShaderManager {
 
     // Load and compile shaders
     async loadShaders() {
-        const [vertSrc, fragSrc] = await Promise.all([
+        const [vertSrc, meshFragSrc, baryFragSrc] = await Promise.all([
             this.loadShaderFile('shaders/main.vert'),
-            this.loadShaderFile('shaders/mesh-gradient.frag')
+            this.loadShaderFile('shaders/mesh-gradient.frag'),
+            this.loadShaderFile('shaders/distorted-noise.frag')
         ]);
 
-        const program = this.createShaderProgram(vertSrc, fragSrc);
-        this.programs.set('main', program);
+        // Create both shader programs
+        const meshProgram = this.createShaderProgram(vertSrc, meshFragSrc);
+        const baryProgram = this.createShaderProgram(vertSrc, baryFragSrc);
 
-        // Set up uniforms
-        this.uniforms.set('u_resolution', this.gl.getUniformLocation(program, 'u_resolution'));
-        this.uniforms.set('u_time', this.gl.getUniformLocation(program, 'u_time'));
-        this.uniforms.set('u_point1', this.gl.getUniformLocation(program, 'u_point1'));
-        this.uniforms.set('u_point2', this.gl.getUniformLocation(program, 'u_point2'));
-        this.uniforms.set('u_point3', this.gl.getUniformLocation(program, 'u_point3'));
-        this.uniforms.set('u_point4', this.gl.getUniformLocation(program, 'u_point4'));
-        this.uniforms.set('u_color1', this.gl.getUniformLocation(program, 'u_color1'));
-        this.uniforms.set('u_color2', this.gl.getUniformLocation(program, 'u_color2'));
-        this.uniforms.set('u_color3', this.gl.getUniformLocation(program, 'u_color3'));
-        this.uniforms.set('u_color4', this.gl.getUniformLocation(program, 'u_color4'));
+        this.programs.set('mesh', meshProgram);
+        this.programs.set('barycentric', baryProgram);
+
+        // Set up uniforms for both programs
+        this.setupUniforms('mesh', meshProgram);
+        this.setupUniforms('barycentric', baryProgram);
 
         // Set up vertex buffer
         this.setupVertexBuffer();
 
         // Initialize noise-based points
         this.initNoisePoints();
+    }
+
+    // Set up uniforms for a specific program
+    setupUniforms(programName, program) {
+        const uniforms = new Map();
+        uniforms.set('u_resolution', this.gl.getUniformLocation(program, 'u_resolution'));
+        uniforms.set('u_time', this.gl.getUniformLocation(program, 'u_time'));
+        uniforms.set('u_point1', this.gl.getUniformLocation(program, 'u_point1'));
+        uniforms.set('u_point2', this.gl.getUniformLocation(program, 'u_point2'));
+        uniforms.set('u_point3', this.gl.getUniformLocation(program, 'u_point3'));
+        uniforms.set('u_point4', this.gl.getUniformLocation(program, 'u_point4'));
+        uniforms.set('u_color1', this.gl.getUniformLocation(program, 'u_color1'));
+        uniforms.set('u_color2', this.gl.getUniformLocation(program, 'u_color2'));
+        uniforms.set('u_color3', this.gl.getUniformLocation(program, 'u_color3'));
+        uniforms.set('u_color4', this.gl.getUniformLocation(program, 'u_color4'));
+        uniforms.set('u_falloff', this.gl.getUniformLocation(program, 'u_falloff'));
+
+        this.uniforms.set(programName, uniforms);
     }
 
     // Load shader source from file
@@ -215,8 +231,8 @@ class ShaderManager {
             const noiseY = this.noise.noise2D(baseX + this.timeOffset + 100, baseY + 100);
 
             // Apply offset with range -1 to 1 (can go outside canvas)
-            this.points[i].x = noiseX * 1.5; // Range: -1.5 to 1.5
-            this.points[i].y = noiseY * 1.5; // Range: -1.5 to 1.5
+            this.points[i].x = noiseX * .5; // Range: -1.5 to 1.5
+            this.points[i].y = noiseY * .5; // Range: -1.5 to 1.5
         }
     }
 
@@ -225,7 +241,14 @@ class ShaderManager {
         if (!this.isReady || !this.isEnabled) return;
 
         const gl = this.gl;
-        const program = this.programs.get('main');
+
+        // Check if barycentric mode is enabled
+        const barycentricCheckbox = document.getElementById('barycentricModeCheckbox');
+        const useBarycentricMode = barycentricCheckbox && barycentricCheckbox.checked;
+
+        const programName = useBarycentricMode ? 'barycentric' : 'mesh';
+        const program = this.programs.get(programName);
+        const uniforms = this.uniforms.get(programName);
 
 
         const color1 = window.UIController.getColor1Value();
@@ -233,14 +256,32 @@ class ShaderManager {
         const color3 = window.UIController.getColor3Value();
         const color4 = window.UIController.getColor4Value();
 
-        // Normalize colors from 0-255 to 0-1 range for WebGL
-        const normalizedColor1 = { r: color1.r / 255.0, g: color1.g / 255.0, b: color1.b / 255.0 };
-        const normalizedColor2 = { r: color2.r / 255.0, g: color2.g / 255.0, b: color2.b / 255.0 };
-        const normalizedColor3 = { r: color3.r / 255.0, g: color3.g / 255.0, b: color3.b / 255.0 };
-        const normalizedColor4 = { r: color4.r / 255.0, g: color4.g / 255.0, b: color4.b / 255.0 };
+        // Check if colors are valid before normalizing
+        let normalizedColor1, normalizedColor2, normalizedColor3, normalizedColor4;
 
-        console.log('Original colors (0-255):', color1, color2, color3, color4);
-        console.log('Normalized colors (0-1):', normalizedColor1, normalizedColor2, normalizedColor3, normalizedColor4);
+        if (!color1 || !color2 || !color3 || !color4) {
+            console.warn('Some colors are null, using defaults:', { color1, color2, color3, color4 });
+            // Use default colors if any are null
+            const defaultColor1 = color1 || { r: 108, g: 46, b: 169 }; // #6C2EA9
+            const defaultColor2 = color2 || { r: 31, g: 18, b: 60 };   // #1F123C
+            const defaultColor3 = color3 || { r: 37, g: 8, b: 68 };    // #250844
+            const defaultColor4 = color4 || { r: 73, g: 92, b: 145 };  // #495C91
+
+            // Normalize colors from 0-255 to 0-1 range for WebGL
+            normalizedColor1 = { r: defaultColor1.r / 255.0, g: defaultColor1.g / 255.0, b: defaultColor1.b / 255.0 };
+            normalizedColor2 = { r: defaultColor2.r / 255.0, g: defaultColor2.g / 255.0, b: defaultColor2.b / 255.0 };
+            normalizedColor3 = { r: defaultColor3.r / 255.0, g: defaultColor3.g / 255.0, b: defaultColor3.b / 255.0 };
+            normalizedColor4 = { r: defaultColor4.r / 255.0, g: defaultColor4.g / 255.0, b: defaultColor4.b / 255.0 };
+        } else {
+            // Normalize colors from 0-255 to 0-1 range for WebGL
+            normalizedColor1 = { r: color1.r / 255.0, g: color1.g / 255.0, b: color1.b / 255.0 };
+            normalizedColor2 = { r: color2.r / 255.0, g: color2.g / 255.0, b: color2.b / 255.0 };
+            normalizedColor3 = { r: color3.r / 255.0, g: color3.g / 255.0, b: color3.b / 255.0 };
+            normalizedColor4 = { r: color4.r / 255.0, g: color4.g / 255.0, b: color4.b / 255.0 };
+        }
+
+        // console.log('Original colors (0-255):', color1, color2, color3, color4);
+        // console.log('Normalized colors (0-1):', normalizedColor1, normalizedColor2, normalizedColor3, normalizedColor4);
         if (!program) return;
 
         // Update noise-based points
@@ -257,20 +298,26 @@ class ShaderManager {
         gl.useProgram(program);
 
         // Set uniforms
-        gl.uniform2f(this.uniforms.get('u_resolution'), this.canvas.width, this.canvas.height);
-        gl.uniform1f(this.uniforms.get('u_time'), time);
+        gl.uniform2f(uniforms.get('u_resolution'), this.canvas.width, this.canvas.height);
+        gl.uniform1f(uniforms.get('u_time'), time);
 
-        // Set point uniforms
-        gl.uniform2f(this.uniforms.get('u_point1'), this.points[0].x, this.points[0].y);
-        gl.uniform2f(this.uniforms.get('u_point2'), this.points[1].x, this.points[1].y);
-        gl.uniform2f(this.uniforms.get('u_point3'), this.points[2].x, this.points[2].y);
-        gl.uniform2f(this.uniforms.get('u_point4'), this.points[3].x, this.points[3].y);
+        // Set point uniforms (only for mesh mode, barycentric creates its own points)
+        if (!useBarycentricMode) {
+            gl.uniform2f(uniforms.get('u_point1'), this.points[0].x, this.points[0].y);
+            gl.uniform2f(uniforms.get('u_point2'), this.points[1].x, this.points[1].y);
+            gl.uniform2f(uniforms.get('u_point3'), this.points[2].x, this.points[2].y);
+            gl.uniform2f(uniforms.get('u_point4'), this.points[3].x, this.points[3].y);
+        }
 
+        // Set color uniforms
+        gl.uniform3f(uniforms.get('u_color1'), normalizedColor1.r, normalizedColor1.g, normalizedColor1.b);
+        gl.uniform3f(uniforms.get('u_color2'), normalizedColor2.r, normalizedColor2.g, normalizedColor2.b);
+        gl.uniform3f(uniforms.get('u_color3'), normalizedColor3.r, normalizedColor3.g, normalizedColor3.b);
+        gl.uniform3f(uniforms.get('u_color4'), normalizedColor4.r, normalizedColor4.g, normalizedColor4.b);
 
-        gl.uniform3f(this.uniforms.get('u_color1'), normalizedColor1.r, normalizedColor1.g, normalizedColor1.b);
-        gl.uniform3f(this.uniforms.get('u_color2'), normalizedColor2.r, normalizedColor2.g, normalizedColor2.b);
-        gl.uniform3f(this.uniforms.get('u_color3'), normalizedColor3.r, normalizedColor3.g, normalizedColor3.b);
-        gl.uniform3f(this.uniforms.get('u_color4'), normalizedColor4.r, normalizedColor4.g, normalizedColor4.b);
+        // Set falloff uniform
+        const falloffValue = window.UIController.getFalloffValue();
+        gl.uniform1f(uniforms.get('u_falloff'), falloffValue);
 
         // Set up vertex attributes
         gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffer);
@@ -287,6 +334,34 @@ class ShaderManager {
         this.isEnabled = enabled;
         if (this.canvas) {
             this.canvas.style.display = enabled ? 'block' : 'none';
+        }
+    }
+
+    // Render shader to a specific canvas at any resolution
+    renderToCanvas(targetCanvas, time) {
+        if (!this.isReady || !this.isEnabled) {
+            console.warn('[ShaderManager] Shader not ready or not enabled');
+            return;
+        }
+
+        // Render shader to the current shader canvas first
+        this.render(time);
+
+        // Get the current shader canvas
+        const currentCanvas = this.canvas;
+        if (!currentCanvas) {
+            console.warn('[ShaderManager] No shader canvas available');
+            return;
+        }
+
+        // Get 2D context for the target canvas and draw the shader scaled
+        const ctx = targetCanvas.getContext('2d');
+        if (ctx) {
+            // Draw the current shader canvas scaled to the target resolution
+            ctx.drawImage(currentCanvas, 0, 0, targetCanvas.width, targetCanvas.height);
+            console.log(`[ShaderManager] Rendered shader to export canvas: ${targetCanvas.width}x${targetCanvas.height}`);
+        } else {
+            console.warn('[ShaderManager] Could not get 2D context for target canvas');
         }
     }
 

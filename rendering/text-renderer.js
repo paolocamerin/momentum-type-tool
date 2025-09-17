@@ -6,6 +6,7 @@ class TextRenderer {
         this.internalHorizontalMargin = 120;
         this.internalVerticalMargin = 120;
         this.internalLineHeightMultiplier = 1.25;
+        this.isPlaceholder = false;
     }
 
     // Set alignment mode
@@ -16,6 +17,16 @@ class TextRenderer {
     // Get alignment mode
     getAlignment() {
         return this.isLeftAligned;
+    }
+
+    // Set placeholder state
+    setPlaceholderState(isPlaceholder) {
+        this.isPlaceholder = isPlaceholder;
+    }
+
+    // Get placeholder state
+    getPlaceholderState() {
+        return this.isPlaceholder;
     }
 
     // Set internal margins
@@ -84,11 +95,28 @@ class TextRenderer {
 
     // Render a single character
     renderCharacter(ctx, character, x, y, fontSize, userHasTyped, fillColor) {
+        // Determine color based on user input state
+        let textColor;
+        if (userHasTyped) {
+            // Actual user content
+            textColor = fillColor;
+        } else {
+            // Placeholder text - light grey with reduced opacity
+            textColor = '#c0c0c0';
+        }
+
         if (FontManager.hasFont()) {
             // Use OpenType.js for custom fonts
             const font = FontManager.getFont();
             const path = font.getPath(character.toUpperCase(), x, y, fontSize);
-            ctx.fillStyle = userHasTyped ? fillColor : '#e6e6e6';
+
+            // Apply reduced opacity for placeholder
+            if (!userHasTyped) {
+                ctx.save();
+                ctx.globalAlpha = 0.4; // Reduced opacity for placeholder
+            }
+
+            ctx.fillStyle = textColor;
             ctx.beginPath();
             path.commands.forEach(cmd => {
                 switch (cmd.type) {
@@ -100,13 +128,28 @@ class TextRenderer {
                 }
             });
             ctx.fill();
+
+            if (!userHasTyped) {
+                ctx.restore(); // Restore normal opacity
+            }
         } else {
             // Use basic text rendering
             ctx.textAlign = this.isLeftAligned ? 'left' : 'center';
             ctx.textBaseline = 'alphabetic';
-            ctx.fillStyle = userHasTyped ? fillColor : '#e6e6e6';
+
+            // Apply reduced opacity for placeholder
+            if (!userHasTyped) {
+                ctx.save();
+                ctx.globalAlpha = 0.4; // Reduced opacity for placeholder
+            }
+
+            ctx.fillStyle = textColor;
             ctx.font = `${fontSize}px Inter, sans-serif`;
             ctx.fillText(character.toUpperCase(), x, y);
+
+            if (!userHasTyped) {
+                ctx.restore(); // Restore normal opacity
+            }
         }
     }
 
@@ -150,6 +193,15 @@ class TextRenderer {
         const factor = UIController.getFactorValue();
         const rows = this.preProcess(words);
         const usableWidth = canvasWidth - UIController.getMarginValue() * 2;
+
+        // console.log('[TextRenderer] Calculating positions:', {
+        //     words: words.substring(0, 20) + '...',
+        //     canvasWidth,
+        //     canvasHeight,
+        //     margin,
+        //     rows: rows.length,
+        //     usableWidth
+        // });
 
         const characters = [];
         let rowPosition = 0;
@@ -260,6 +312,19 @@ class TextRenderer {
     render(ctx, words, userHasTyped, animationTime, canvasWidth, canvasHeight, fillColor) {
         const characters = this.calculateCharacterPositions(ctx, words, userHasTyped, animationTime, canvasWidth, canvasHeight);
 
+        // console.log('[TextRenderer] Rendering', characters.length, 'characters');
+
+        for (const char of characters) {
+            this.renderCharacter(ctx, char.character, char.x, char.y, char.fontSize, char.userHasTyped, fillColor);
+        }
+    }
+
+    // Render text for export at fixed resolution (1920x1080)
+    renderForExport(ctx, words, userHasTyped, animationTime, exportWidth, exportHeight, fillColor) {
+        console.log('[TextRenderer] renderForExport called with dimensions:', exportWidth, 'x', exportHeight);
+        const characters = this.calculateCharacterPositions(ctx, words, userHasTyped, animationTime, exportWidth, exportHeight);
+
+        console.log('[TextRenderer] Calculated', characters.length, 'characters for export');
         for (const char of characters) {
             this.renderCharacter(ctx, char.character, char.x, char.y, char.fontSize, char.userHasTyped, fillColor);
         }

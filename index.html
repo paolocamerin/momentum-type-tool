@@ -4,114 +4,188 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Momentum type tool V2 - Vanilla JS</title>
+    <title>Momentum Type Tool</title>
 
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
-    <script src="https://unpkg.com/opentype.js@1.3.4/dist/opentype.js"></script>
-    <script src="https://unpkg.com/simplex-noise@2.4.0/simplex-noise.js"></script>
-    <!-- Pickr color picker -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@simonwep/pickr/dist/themes/classic.min.css" />
-    <script src="https://cdn.jsdelivr.net/npm/@simonwep/pickr"></script>
+    <!-- OpenType.js for font processing -->
+    <script src="https://cdn.jsdelivr.net/npm/opentype.js@1.3.4/dist/opentype.min.js"></script>
+
+    <!-- Color picker -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@simonwep/pickr/dist/themes/nano.min.css" />
+    <script src="https://cdn.jsdelivr.net/npm/@simonwep/pickr/dist/pickr.min.js"></script>
+
+    <!-- Simplex noise library with fallback -->
+    <script src="https://cdn.jsdelivr.net/npm/simplex-noise@4.0.1/dist/simplex-noise.min.js"></script>
+
     <!-- Phosphor Icons for swap button -->
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
     <link rel="stylesheet" href="style.css">
 </head>
 
 <body>
-    <canvas id="canvas"></canvas>
-    <canvas id="shader-canvas"></canvas>
-
-    <div class="controls">
-        <div class="slider-container">
-            <label for="phaseSlider">Phase: <span id="phaseValue" class="value-display">0.00</span></label>
-            <input type="range" id="phaseSlider" min="0" max="1" step="0.01" value="0">
-        </div>
-
-        <div class="slider-container">
-            <label for="ampSlider">Amplitude: <span id="ampValue" class="value-display">100</span></label>
-            <input type="range" id="ampSlider" min="0" max="1" step="0.01" value="0.5">
-        </div>
-
-        <div class="slider-container">
-            <label for="verticalOffsetSlider">Vertical Offset: <span id="verticalOffsetValue"
-                    class="value-display">0.00</span></label>
-            <input type="range" id="verticalOffsetSlider" min="0" max="1" step="0.01" value="0">
-        </div>
-
-        <div class="slider-container">
-            <label for="marginSlider">Margin: <span id="marginValue" class="value-display">100</span>px</label>
-            <input type="range" id="marginSlider" min="0" max="1" step="0.01" value="0.5">
-        </div>
-
-        <div class="text-input-container">
-            <label for="textInput">Text:</label>
-            <textarea id="textInput" placeholder="Enter your text here..." rows="3"></textarea>
-        </div>
-
-        <button id="fontUploadBtn">Choose Font</button>
-        <input type="file" id="fontFile" accept=".ttf,.otf,.woff" style="display: none;">
-
-        <div class="font-selector-container">
-            <label for="fontSelect">Font:</label>
-            <select id="fontSelect">
-                <option value="">Select a font</option>
-            </select>
-        </div>
-
-        <button id="playPauseBtn">Pause/Play</button>
-        <button id="exportSVGBtn">Export SVG</button>
-        <button id="exportPNGBtn">Export PNG</button>
-        <button id="exportVideoBtn">Export Video</button>
-        <button id="recordLiveBtn">Record Live</button>
-
-        <div class="checkbox-container">
-            <input type="checkbox" id="alignmentCheckbox">
-            <label for="alignmentCheckbox">Left Align</label>
-        </div>
-
-        <div class="checkbox-container">
-            <input type="checkbox" id="shaderModeCheckbox">
-            <label for="shaderModeCheckbox">Shader Mode</label>
-        </div>
-
-        <div class="color-controls">
-            <div class="color-picker-group">
-                <label>Background</label>
-                <div id="bgColorPicker" class="color-swatch"></div>
+    <div class="app-container">
+        <!-- Sidebar Controls -->
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <h1>MOMENTUM TYPE TOOL</h1>
             </div>
 
-            <button id="swapColorsBtn" class="swap-btn" title="Swap colors">
-                <i class="ph ph-arrows-left-right"></i>
-            </button>
-
-            <div class="color-picker-group">
-                <label>Text</label>
-                <div id="textColorPicker" class="color-swatch"></div>
+            <!-- Text Input Section -->
+            <div class="control-section">
+                <h3>Text</h3>
+                <div class="text-input-wrapper">
+                    <textarea id="textInput" placeholder="Type something..." rows="3"></textarea>
+                    <button id="historyBtn" class="history-btn" title="Previous texts">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <polyline points="12,6 12,12 16,14"></polyline>
+                        </svg>
+                    </button>
+                    <div id="historyDropdown" class="history-dropdown hidden">
+                        <div class="history-header">Previous texts</div>
+                        <div id="historyList" class="history-list">
+                            <div class="history-empty">No previous texts yet</div>
+                        </div>
+                        <div class="history-footer">
+                            <button id="clearHistoryBtn" class="clear-history-btn">Clear All</button>
+                        </div>
+                    </div>
+                </div>
             </div>
 
-            <div class="color-picker-group">
-                <label>Color 1</label>
-                <div id="colorValue1Picker" class="color-swatch"></div>
+            <!-- Font Section -->
+            <div class="control-section">
+                <div class="section-row">
+                    <button id="fontUploadBtn" class="select-btn">Select font</button>
+                    <div class="font-info">
+                        <span class="font-label">Recently added font</span>
+                        <select id="fontSelect" class="font-dropdown">
+                            <option value="">Inter (default)</option>
+                        </select>
+                    </div>
+                </div>
+                <input type="file" id="fontFile" accept=".ttf,.otf,.woff" style="display: none;">
             </div>
 
-            <div class="color-picker-group">
-                <label>Color 2</label>
-                <div id="colorValue2Picker" class="color-swatch"></div>
+            <!-- Color Section -->
+            <div class="control-section">
+                <h3>Color</h3>
+                <div class="color-group">
+                    <div class="color-row">
+                        <div class="color-item">
+                            <div id="bgColorPicker" class="color-swatch"></div>
+                            <span>Background</span>
+                        </div>
+                        <button id="swapColorsBtn" class="swap-btn" title="Swap colors">⇄</button>
+                        <div class="color-item">
+                            <div id="textColorPicker" class="color-swatch"></div>
+                            <span>Typography</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="checkbox-row">
+                    <input type="checkbox" id="shaderModeCheckbox">
+                    <label for="shaderModeCheckbox">Gradient background</label>
+                </div>
+
+                <div class="gradient-colors">
+                    <h4>Color</h4>
+                    <div class="gradient-swatches">
+                        <div id="colorValue1Picker" class="color-swatch"></div>
+                        <div id="colorValue2Picker" class="color-swatch"></div>
+                        <div id="colorValue3Picker" class="color-swatch"></div>
+                        <div id="colorValue4Picker" class="color-swatch"></div>
+                    </div>
+                    <div class="slider-container">
+                        <label>Gradient Falloff</label>
+                        <input type="range" id="falloffSlider" min="0.5" max="100.0" step="0.1" value="10.0">
+                    </div>
+                </div>
             </div>
 
-            <div class="color-picker-group">
-                <label>Color 3</label>
-                <div id="colorValue3Picker" class="color-swatch"></div>
+            <!-- Animation Controls -->
+            <div class="control-section">
+                <div class="slider-group">
+                    <div class="slider-container">
+                        <label>Time offset adjustment</label>
+                        <input type="range" id="phaseSlider" min="0" max="1" step="0.01" value="0">
+                    </div>
+                    <div class="slider-container">
+                        <label>Amplitude</label>
+                        <input type="range" id="ampSlider" min="0" max="1" step="0.01" value="0.5">
+                    </div>
+                    <div class="slider-container">
+                        <label>Vertical wave</label>
+                        <input type="range" id="verticalOffsetSlider" min="0" max="1" step="0.01" value="0">
+                    </div>
+                    <div class="slider-container">
+                        <label>Time offset adjustment</label>
+                        <input type="range" id="marginSlider" min="0" max="1" step="0.01" value="0.0">
+                    </div>
+                </div>
             </div>
 
-            <div class="color-picker-group">
-                <label>Color 4</label>
-                <div id="colorValue4Picker" class="color-swatch"></div>
+            <!-- Playback Controls -->
+            <div class="control-section">
+                <button id="playPauseBtn" class="playback-btn">▶</button>
+            </div>
+
+            <!-- Export Section -->
+            <div class="control-section export-section">
+                <button id="exportSVGBtn" class="export-btn">Export as SVG</button>
+                <button id="exportPNGBtn" class="export-btn">Export as PNG</button>
+                <button id="exportVideoBtn" class="export-btn primary">Export as MP4</button>
+            </div>
+
+            <!-- Hidden Controls -->
+            <div class="checkbox-container" style="display: none;">
+                <input type="checkbox" id="alignmentCheckbox">
+                <label for="alignmentCheckbox">Left Align</label>
+            </div>
+            <div class="checkbox-container" style="display: none;">
+                <input type="checkbox" id="barycentricModeCheckbox">
+                <label for="barycentricModeCheckbox">Barycentric Mode (Experimental)</label>
+            </div>
+
+            <!-- Hidden value displays for sliders -->
+            <div style="display: none;">
+                <span id="phaseValue">0.00</span>
+                <span id="ampValue">100</span>
+                <span id="verticalOffsetValue">0.00</span>
+                <span id="marginValue">100</span>
+                <span id="falloffValue">10.0</span>
+            </div>
+        </div>
+
+        <!-- Main Canvas Area -->
+        <div class="main-content">
+            <div class="canvas-container">
+                <canvas id="canvas"></canvas>
+                <canvas id="shader-canvas"></canvas>
             </div>
         </div>
     </div>
 
+    <!-- Video Export Progress UI -->
+    <div id="exportProgress" class="export-progress hidden">
+        <div class="progress-content">
+            <h3>Exporting Video...</h3>
+            <div class="progress-bar">
+                <div id="progressFill" class="progress-fill"></div>
+            </div>
+            <div id="progressText" class="progress-text">0%</div>
+        </div>
+    </div>
 
+    <!-- Toast Notifications -->
+    <div id="successToast" class="toast toast-success hidden">
+        <span id="successMessage"></span>
+    </div>
+
+    <div id="errorToast" class="toast toast-error hidden">
+        <span id="errorMessage"></span>
+    </div>
 
     <script src="font-manager.js"></script>
     <script src="canvas/canvas-manager.js"></script>

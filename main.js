@@ -38,8 +38,7 @@ async function init() {
         }
 
         // Initialize shader system
-        const shaderCanvas = window.CanvasManager.getShaderCanvas();
-        const shaderInitialized = await window.ShaderManager.init(shaderCanvas);
+        const shaderInitialized = await window.ShaderManager.init();
 
         // Initialize render pipeline
         window.RenderPipeline.init();

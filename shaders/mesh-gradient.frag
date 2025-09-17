@@ -2,6 +2,7 @@ precision mediump float;
 
 uniform vec2 u_resolution;
 uniform float u_time;
+uniform float u_falloff;
 
 uniform vec3 u_color1;
 uniform vec3 u_color2;
@@ -44,11 +45,11 @@ void main() {
     float dist4 = length(st - point4);
     
     // Create smooth falloff for each point (inverse squared distance weighting)
-    float falloff = 2.0; // Controls blend radius
-    float weight1 = 1.0 / (1.0 + dist1 * dist1 * falloff);
-    float weight2 = 1.0 / (1.0 + dist2 * dist2 * falloff);
-    float weight3 = 1.0 / (1.0 + dist3 * dist3 * falloff);
-    float weight4 = 1.0 / (1.0 + dist4 * dist4 * falloff);
+    // Use the dynamic falloff value from the UI slider
+    float weight1 = 1.0 / (1.0 + dist1 * dist1 * u_falloff);
+    float weight2 = 1.0 / (1.0 + dist2 * dist2 * u_falloff);
+    float weight3 = 1.0 / (1.0 + dist3 * dist3 * u_falloff);
+    float weight4 = 1.0 / (1.0 + dist4 * dist4 * u_falloff);
     
     // Normalize weights
     float totalWeight = weight1 + weight2 + weight3 + weight4;
@@ -56,9 +57,9 @@ void main() {
     weight2 /= totalWeight;
     weight3 /= totalWeight;
     weight4 /= totalWeight;
-    
+     vec3 finalColor = vec3(0.0, 0.0, 0.0);
     // Blend colors based on weights
-    vec3 finalColor = u_color1 * weight1 + 
+    finalColor = u_color1 * weight1 + 
                      u_color2 * weight2 + 
                      u_color3 * weight3 + 
                      u_color4 * weight4;
