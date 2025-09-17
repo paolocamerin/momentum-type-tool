@@ -394,7 +394,7 @@ function getVerticalOffsetValue() {
 }
 
 function getMarginValue() {
-    return 50 + parseFloat(marginSlider.value) * 350;
+    return 140 + parseFloat(marginSlider.value) * 350;
 }
 
 // Get current state for other modules

@@ -310,6 +310,15 @@ class TextRenderer {
             this.renderCharacter(ctx, char.character, char.x, char.y, char.fontSize, char.userHasTyped, fillColor);
         }
     }
+
+    // Render text for export at fixed resolution (1920x1080)
+    renderForExport(ctx, words, userHasTyped, animationTime, exportWidth, exportHeight, fillColor) {
+        const characters = this.calculateCharacterPositions(ctx, words, userHasTyped, animationTime, exportWidth, exportHeight);
+
+        for (const char of characters) {
+            this.renderCharacter(ctx, char.character, char.x, char.y, char.fontSize, char.userHasTyped, fillColor);
+        }
+    }
 }
 
 // Export singleton instance

@@ -16,9 +16,13 @@ function exportToSVG() {
 
     const svgNS = 'http://www.w3.org/2000/svg';
     const svg = document.createElementNS(svgNS, 'svg');
-    svg.setAttribute('width', window.innerWidth);
-    svg.setAttribute('height', (window.innerWidth / 16) * 9);
-    svg.setAttribute('viewBox', `0 0 ${window.innerWidth} ${(window.innerWidth / 16) * 9}`);
+
+    // Fixed export dimensions (1920x1080)
+    const exportWidth = 1920;
+    const exportHeight = 1080;
+    svg.setAttribute('width', exportWidth);
+    svg.setAttribute('height', exportHeight);
+    svg.setAttribute('viewBox', `0 0 ${exportWidth} ${exportHeight}`);
 
     // Add background rectangle
     const backgroundRect = document.createElementNS(svgNS, 'rect');
@@ -185,49 +189,32 @@ function exportToPNG() {
         return;
     }
 
-    // Create a temporary canvas for high-resolution export
+    // Create a temporary canvas for fixed 1920x1080 export
     const tempCanvas = document.createElement('canvas');
     const tempCtx = tempCanvas.getContext('2d');
 
-    // Set high resolution (2x for better quality)
-    const scale = 2;
-    tempCanvas.width = canvas.width * scale;
-    tempCanvas.height = canvas.height * scale;
-
-    // Scale the context
-    tempCtx.scale(scale, scale);
+    // Set fixed export dimensions (1920x1080)
+    const exportWidth = 1920;
+    const exportHeight = 1080;
+    tempCanvas.width = exportWidth;
+    tempCanvas.height = exportHeight;
 
     // Get current state
     const state = UIController.getCurrentState();
     const backgroundColor = UIController.getBackgroundColor();
     const fillColor = UIController.getFillColor();
 
-    // Check if shader mode is enabled
-    const isShaderMode = window.RenderPipeline.getShaderMode();
+    // Render at export resolution using RenderPipeline
+    const animationTime = window.AnimationEngine.getAnimationTime();
 
-    if (isShaderMode) {
-        // For shader mode, we need to capture the shader canvas
-        const shaderCanvas = document.getElementById('shader-canvas');
-        if (shaderCanvas) {
-            // Ensure shader is rendered with current state
-            const animationTime = window.AnimationEngine.getAnimationTime();
-            window.ShaderManager.render(animationTime);
+    console.log('[PNG Export] Starting export with dimensions:', exportWidth, 'x', exportHeight);
+    console.log('[PNG Export] Background color:', backgroundColor);
+    console.log('[PNG Export] Shader mode:', window.RenderPipeline.getShaderMode());
 
-            // Draw shader background
-            tempCtx.drawImage(shaderCanvas, 0, 0, canvas.width, canvas.height);
-        } else {
-            // Fallback to solid color
-            tempCtx.fillStyle = backgroundColor;
-            tempCtx.fillRect(0, 0, canvas.width, canvas.height);
-        }
-    } else {
-        // Draw solid background
-        tempCtx.fillStyle = backgroundColor;
-        tempCtx.fillRect(0, 0, canvas.width, canvas.height);
-    }
+    // Use RenderPipeline to render directly to the export canvas at 1920x1080
+    window.RenderPipeline.renderForExport(tempCtx, exportWidth, exportHeight, animationTime);
 
-    // Draw the text on top
-    tempCtx.drawImage(canvas, 0, 0);
+    console.log('[PNG Export] Render complete, creating blob...');
 
     // Convert to PNG and download
     tempCanvas.toBlob((blob) => {

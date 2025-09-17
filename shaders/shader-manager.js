@@ -318,6 +318,34 @@ class ShaderManager {
         }
     }
 
+    // Render shader to a specific canvas at any resolution
+    renderToCanvas(targetCanvas, time) {
+        if (!this.isReady || !this.isEnabled) {
+            console.warn('[ShaderManager] Shader not ready or not enabled');
+            return;
+        }
+
+        // Render shader to the current shader canvas first
+        this.render(time);
+
+        // Get the current shader canvas
+        const currentCanvas = this.canvas;
+        if (!currentCanvas) {
+            console.warn('[ShaderManager] No shader canvas available');
+            return;
+        }
+
+        // Get 2D context for the target canvas and draw the shader scaled
+        const ctx = targetCanvas.getContext('2d');
+        if (ctx) {
+            // Draw the current shader canvas scaled to the target resolution
+            ctx.drawImage(currentCanvas, 0, 0, targetCanvas.width, targetCanvas.height);
+            console.log(`[ShaderManager] Rendered shader to export canvas: ${targetCanvas.width}x${targetCanvas.height}`);
+        } else {
+            console.warn('[ShaderManager] Could not get 2D context for target canvas');
+        }
+    }
+
     // Get shader status
     getStatus() {
         return {

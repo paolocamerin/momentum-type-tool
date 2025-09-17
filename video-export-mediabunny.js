@@ -70,10 +70,10 @@ async function exportCanvasToMP4({ canvas, durationSec = 5, quality = 'high', on
         const bitrate = qualitySettings[quality] || qualitySettings.high;
         console.log('⚙️ Quality settings:', { quality, bitrate });
 
-        // Create a temporary canvas for recording
+        // Create a temporary canvas for recording at fixed 1920x1080 resolution
         const tempCanvas = document.createElement('canvas');
-        tempCanvas.width = canvas.width;
-        tempCanvas.height = canvas.height;
+        tempCanvas.width = 1920;
+        tempCanvas.height = 1080;
         const tempCtx = tempCanvas.getContext('2d');
 
         // Get canvas stream
@@ -137,38 +137,8 @@ async function exportCanvasToMP4({ canvas, durationSec = 5, quality = 'high', on
             const backgroundColor = UIController.getBackgroundColor();
             const fillColor = UIController.getFillColor();
 
-            // Clear temp canvas
-            tempCtx.clearRect(0, 0, tempCanvas.width, tempCanvas.height);
-
-            // Render background
-            if (window.RenderPipeline.getShaderMode()) {
-                // For shader mode, render shader first
-                const shaderCanvas = document.getElementById('shader-canvas');
-                if (shaderCanvas) {
-                    window.ShaderManager.render(tSec);
-                    tempCtx.drawImage(shaderCanvas, 0, 0, tempCanvas.width, tempCanvas.height);
-                } else {
-                    tempCtx.fillStyle = backgroundColor;
-                    tempCtx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
-                }
-            } else {
-                tempCtx.fillStyle = backgroundColor;
-                tempCtx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
-            }
-
-            // Render text
-            window.RenderPipeline.render(
-                state.words,
-                state.userHasTyped,
-                tSec,
-                tempCanvas.width,
-                tempCanvas.height,
-                backgroundColor,
-                fillColor
-            );
-
-            // Copy the rendered content to temp canvas
-            tempCtx.drawImage(canvas, 0, 0);
+            // Render frame at export resolution using RenderPipeline
+            window.RenderPipeline.renderForExport(tempCtx, tempCanvas.width, tempCanvas.height, tSec);
 
             const progress = (frameIndex + 1) / totalFrames;
             updateProgress(progressDiv, progress);

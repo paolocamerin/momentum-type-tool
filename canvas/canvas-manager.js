@@ -38,38 +38,74 @@ class CanvasManager {
 
     // Set up canvas positioning and layering
     setupCanvasPositioning() {
-        // Position shader canvas behind display canvas
+        // Both canvases should be positioned absolutely within the container
+        // and centered using the same logic
+
+        // Shader canvas (background layer)
         this.shaderCanvas.style.position = 'absolute';
-        this.shaderCanvas.style.top = '0';
-        this.shaderCanvas.style.left = '0';
-        this.shaderCanvas.style.zIndex = '-1';
+        this.shaderCanvas.style.zIndex = '1';
         this.shaderCanvas.style.pointerEvents = 'none';
 
-        // Display canvas on top
-        this.displayCanvas.style.position = 'relative';
-        this.displayCanvas.style.zIndex = '1';
+        // Display canvas (text layer on top)
+        this.displayCanvas.style.position = 'absolute';
+        this.displayCanvas.style.zIndex = '2';
+        this.displayCanvas.style.pointerEvents = 'none';
     }
 
-    // Resize both canvases
+    // Resize both canvases to fit within the 70% allocated space
     resize() {
         if (!this.isInitialized) return;
 
-        const width = window.innerWidth;
-        const height = (width / 16) * 9;
+        // Get the canvas container dimensions (70% of viewport height)
+        const container = document.querySelector('.canvas-container');
+        if (!container) return;
 
-        // Resize display canvas
-        this.displayCanvas.width = width;
-        this.displayCanvas.height = height;
-        this.displayCanvas.style.width = width + 'px';
-        this.displayCanvas.style.height = height + 'px';
+        const containerWidth = container.clientWidth;
+        const containerHeight = container.clientHeight;
 
-        // Resize shader canvas to match
-        this.shaderCanvas.width = width;
-        this.shaderCanvas.height = height;
-        this.shaderCanvas.style.width = width + 'px';
-        this.shaderCanvas.style.height = height + 'px';
+        // Calculate canvas size maintaining 16:9 aspect ratio
+        const aspectRatio = 16 / 9;
+        let canvasWidth, canvasHeight;
 
-        console.log(`[CanvasManager] Canvas resized: ${width}x${height}`);
+        // Fit by width or height, whichever is more restrictive
+        if (containerWidth / containerHeight > aspectRatio) {
+            // Container is wider than 16:9, fit by height
+            canvasHeight = containerHeight;
+            canvasWidth = canvasHeight * aspectRatio;
+        } else {
+            // Container is taller than 16:9, fit by width
+            canvasWidth = containerWidth;
+            canvasHeight = canvasWidth / aspectRatio;
+        }
+
+        // Ensure we don't exceed container bounds
+        canvasWidth = Math.min(canvasWidth, containerWidth);
+        canvasHeight = Math.min(canvasHeight, containerHeight);
+
+        // Calculate centered position within container
+        const leftOffset = (containerWidth - canvasWidth) / 2;
+        const topOffset = (containerHeight - canvasHeight) / 2;
+
+        // Set display canvas size and position
+        this.displayCanvas.width = canvasWidth;
+        this.displayCanvas.height = canvasHeight;
+        this.displayCanvas.style.width = canvasWidth + 'px';
+        this.displayCanvas.style.height = canvasHeight + 'px';
+        this.displayCanvas.style.left = leftOffset + 'px';
+        this.displayCanvas.style.top = topOffset + 'px';
+
+        // Set shader canvas to match exactly (same size and position)
+        this.shaderCanvas.width = canvasWidth;
+        this.shaderCanvas.height = canvasHeight;
+        this.shaderCanvas.style.width = canvasWidth + 'px';
+        this.shaderCanvas.style.height = canvasHeight + 'px';
+        this.shaderCanvas.style.left = leftOffset + 'px';
+        this.shaderCanvas.style.top = topOffset + 'px';
+
+        console.log(`[CanvasManager] Canvas resized: ${canvasWidth}x${canvasHeight} (16:9 aspect ratio within ${containerWidth}x${containerHeight} container)`);
+        console.log(`[CanvasManager] Canvas position: left=${leftOffset}px, top=${topOffset}px`);
+        console.log(`[CanvasManager] Display canvas position:`, this.displayCanvas.style.left, this.displayCanvas.style.top);
+        console.log(`[CanvasManager] Shader canvas position:`, this.shaderCanvas.style.left, this.shaderCanvas.style.top);
     }
 
     // Get display canvas and context

@@ -29,6 +29,27 @@ class BackgroundRenderer {
         }
     }
 
+    // Render background for export at fixed resolution
+    renderForExport(ctx, exportWidth, exportHeight, backgroundColor, time) {
+        if (this.shaderMode) {
+            // For shader mode, we need to render the shader at export resolution
+            // Create a temporary shader canvas at export resolution
+            const tempShaderCanvas = document.createElement('canvas');
+            tempShaderCanvas.width = exportWidth;
+            tempShaderCanvas.height = exportHeight;
+
+            // Render shader at export resolution
+            window.ShaderManager.renderToCanvas(tempShaderCanvas, time);
+
+            // Draw the shader output to the export canvas
+            ctx.drawImage(tempShaderCanvas, 0, 0, exportWidth, exportHeight);
+        } else {
+            // Solid color mode: render solid background
+            ctx.fillStyle = backgroundColor;
+            ctx.fillRect(0, 0, exportWidth, exportHeight);
+        }
+    }
+
     // Get background type
     getBackgroundType() {
         return this.shaderMode ? 'shader' : 'solid';
