@@ -66,7 +66,7 @@ void main() {
     
     // Add animated grain effect (matching your main shader)
     float grain = fract(sin(dot(uv + u_time * 0.01, vec2(12.9898, 78.233))) * 43758.5453);
-    grain = (grain - 0.5) * 0.03; // Subtle grain
+    grain = (grain - 0.5) * 0.01; // Subtle grain
     finalColor += grain;
     
     // Add color variation based on position
