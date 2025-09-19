@@ -144,12 +144,46 @@ async function loadDefaultFont() {
         }
 
         // If no stored font, load Inter as default
-        const interURL = '../Assets/Inter_28pt-Regular.ttf';
-        const response = await fetch(interURL);
-        const buffer = await response.arrayBuffer();
-        await processFontData(buffer, 'Inter (default)', false);
+        await loadInterFont();
     } catch (err) {
         console.error('Error loading default font:', err);
+    }
+}
+
+async function loadInterFont() {
+    try {
+        // Try WOFF2 first, then TTF as fallback
+        let interURL = './Assets/Inter-Regular.woff2';
+        console.log('Loading Inter font from:', interURL);
+
+        try {
+            const response = await fetch(interURL);
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            const buffer = await response.arrayBuffer();
+            await processFontData(buffer, 'Inter (default)', false);
+            console.log('Inter font loaded from WOFF2 file');
+        } catch (woff2Error) {
+            console.log('WOFF2 failed, trying TTF:', woff2Error.message);
+            interURL = './Assets/Inter_28pt-Regular.ttf';
+            const response = await fetch(interURL);
+            const buffer = await response.arrayBuffer();
+            await processFontData(buffer, 'Inter (default)', false);
+            console.log('Inter font loaded from TTF file');
+        }
+
+        console.log('Font details:', {
+            familyName: font.names.fontFamily?.en || 'Unknown',
+            styleName: font.names.fontSubfamily?.en || 'Unknown',
+            fullName: font.names.fullName?.en || 'Unknown',
+            unitsPerEm: font.unitsPerEm,
+            ascender: font.ascender,
+            descender: font.descender
+        });
+    } catch (err) {
+        console.error('Error loading Inter font:', err);
+        // Fallback to system font
+        font = null;
+        updateFontInfo('System font (fallback)', 'Arial, sans-serif');
     }
 }
 
@@ -217,18 +251,24 @@ async function handleFontUpload(e) {
 }
 
 async function handleFontChange(e) {
-    if (!e.target.value) return;
-
     try {
-        const fontData = await loadStoredFont(e.target.value);
-        await processFontData(fontData.data, fontData.name);
+        if (!e.target.value || e.target.value === 'default') {
+            // Default font selected
+            console.log('Default font selected, loading Inter from Assets folder');
+            await loadInterFont();
+        } else {
+            // Custom font selected
+            console.log('Custom font selected:', e.target.value);
+            const fontData = await loadStoredFont(e.target.value);
+            await processFontData(fontData.data, fontData.name);
+        }
 
         // Trigger re-render if paused
         if (window.UIController && window.UIController.triggerRenderIfPaused) {
             window.UIController.triggerRenderIfPaused();
         }
     } catch (err) {
-        console.error('Error loading stored font:', err);
+        console.error('Error loading font:', err);
     }
 }
 
@@ -236,6 +276,7 @@ async function handleFontChange(e) {
 window.FontManager = {
     initDB,
     loadDefaultFont,
+    loadInterFont,
     createFontSelector,
     handleFontUpload,
     handleFontChange,

@@ -11,8 +11,8 @@ let bgColorPicker, textColorPicker, swapColorsBtn;
 let bgPickr, textPickr, colorValue1Picker, colorValue2Picker, colorValue3Picker, colorValue4Picker;
 
 // Color state
-let backgroundColor = '#ffffff';
-let textColor = '#000000';
+let backgroundColor = '#000000';
+let textColor = '#ffffff';
 let color1 = '#6C2EA9';
 let color2 = '#1F123C';
 let color3 = '#250844';
@@ -74,6 +74,9 @@ function initUI(initialWords, initialUserHasTyped, initialWdt) {
 
     // Initialize alignment state from checkbox
     window.RenderPipeline.setTextAlignment(alignmentCheckbox.checked);
+
+    // Initialize shader mode state from checkbox
+    window.RenderPipeline.setShaderMode(shaderModeCheckbox.checked);
 
     // Initialize color pickers
     initColorPickers();

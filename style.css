@@ -27,7 +27,8 @@ body {
     border-right: 1px solid #333;
     display: flex;
     flex-direction: column;
-    overflow-y: auto;
+    /* overflow-y: auto; */
+    overflow-x: hidden;
     padding: 0;
 }
 
@@ -298,7 +299,7 @@ body {
 .slider-container {
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 8px;
 }
 
 .slider-container label {
@@ -659,6 +660,7 @@ canvas {
         height: 40vh;
         border-right: none;
         border-bottom: 1px solid #333;
+        overflow-y: auto;
     }
 
     .main-content {
